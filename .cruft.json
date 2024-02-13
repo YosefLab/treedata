@@ -1,0 +1,29 @@
+{
+  "template": "https://github.com/scverse/cookiecutter-scverse",
+  "commit": "eaf57d22e4e524debfeae4468eb770012d3b8cbb",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "project_name": "treedata",
+      "package_name": "treedata",
+      "project_description": "anndata with trees",
+      "author_full_name": "William Colgan",
+      "author_email": "wcolgan@mit.edu",
+      "github_user": "colganwi",
+      "project_repo": "https://github.com/YosefLab/treedata",
+      "license": "BSD 3-Clause License",
+      "_copy_without_render": [
+        ".github/workflows/build.yaml",
+        ".github/workflows/test.yaml",
+        "docs/_templates/autosummary/**.rst"
+      ],
+      "_render_devdocs": false,
+      "_jinja2_env_vars": {
+        "lstrip_blocks": true,
+        "trim_blocks": true
+      },
+      "_template": "https://github.com/scverse/cookiecutter-scverse"
+    }
+  },
+  "directory": null
+}
