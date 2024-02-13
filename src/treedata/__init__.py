@@ -1,7 +1,6 @@
 from importlib.metadata import version
 
-from . import pl, pp, tl
-
-__all__ = ["pl", "pp", "tl"]
+from ._core.treedata import TreeData
+from ._core.merge import concat
 
 __version__ = version("treedata")

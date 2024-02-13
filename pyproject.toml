@@ -20,6 +20,10 @@ urls.Source = "https://github.com/YosefLab/treedata"
 urls.Home-page = "https://github.com/YosefLab/treedata"
 dependencies = [
     "anndata",
+    "numpy",
+    "pandas",
+    "pyarrow",
+    "networkx",
     # for debug logging (referenced from the issue template)
     "session-info",
 ]
@@ -46,6 +50,7 @@ doc = [
 test = [
     "pytest",
     "coverage",
+    "scanpy",
 ]
 
 [tool.coverage.run]
