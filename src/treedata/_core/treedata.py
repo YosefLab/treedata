@@ -26,14 +26,14 @@ if TYPE_CHECKING:
 class TreeData(ad.AnnData):
     """AnnData with trees.
 
-    :class:`~treedata.TreeData` is a light-weight wrapper around :class:`~anndata.AnnData`
-    which adds two additional attributes, :attr:`obst` and :attr:`vart`, to
-    store trees for observations and variables A :class:`~treedata.TreeData`
+    `TreeData` is a light-weight wrapper around :class:`~anndata.AnnData`
+    which adds two additional attributes, `obst` and `vart`, to
+    store trees for observations and variables A `TreeData`
     object can be used just like an :class:`~anndata.AnnData` object and stores a
-    data matrix :attr:`X` together with annotations
-    of observations :attr:`obs` (:attr:`obsm`, :attr:`obsp`, :attr:`obst`),
-    variables :attr:`var` (:attr:`varm`, :attr:`varp`, :attr:`vart`),
-    and unstructured annotations :attr:`uns`.
+    data matrix `X` together with annotations
+    of observations `obs` (`obsm`, `obsp`, `obst`),
+    variables `var` (`varm`, `varp`, `vart`),
+    and unstructured annotations `uns`.
 
     Parameters
     ----------
@@ -50,12 +50,12 @@ class TreeData(ad.AnnData):
         Key-indexed multi-dimensional observations annotation of length #observations.
         If passing a :class:`~numpy.ndarray`, it needs to have a structured datatype.
     obst
-        Key-indexed :class:`~nx.DiGraph` trees leaf nodes in the observations axis.
+        Key-indexed :class:`~networkx.DiGraph` trees leaf nodes in the observations axis.
     varm
         Key-indexed multi-dimensional variables annotation of length #variables.
         If passing a :class:`~numpy.ndarray`, it needs to have a structured datatype.
     vart
-        Key-indexed :class:`~nx.DiGraph` trees leaf nodes in the variables axis.
+        Key-indexed :class:`~networkx.DiGraph` trees leaf nodes in the variables axis.
     layers
         Key-indexed multi-dimensional arrays aligned to dimensions of `X`.
     shape
@@ -121,18 +121,18 @@ class TreeData(ad.AnnData):
         self._vart = AxisTrees(self, 1, vals=vart)
 
     def obst_keys(self) -> list[str]:
-        """List keys of variable annotation :attr:`obst`."""
+        """List keys of variable annotation `obst`."""
         return list(self._obst.keys())
 
     def vart_keys(self) -> list[str]:
-        """List keys of variable annotation :attr:`vart`."""
+        """List keys of variable annotation `vart`."""
         return list(self._vart.keys())
 
     @property
     def obst(self) -> AxisTrees:
         """Tree annotation of observations
 
-        Stores for each key a :class:`~nx.DiGraph` with leaf nodes in
+        Stores for each key a :class:`~networkx.DiGraph` with leaf nodes in
         `obs_names`. Is subset and pruned with `data` but behaves
         otherwise like a :term:`mapping`.
         """
@@ -142,7 +142,7 @@ class TreeData(ad.AnnData):
     def vart(self):
         """Tree annotation of variables
 
-        Stores for each key a :class:`~nx.DiGraph` with leaf nodes in
+        Stores for each key a :class:`~networkx.DiGraph` with leaf nodes in
         `var_names`. Is subset and pruned with `data` but behaves
         otherwise like a :term:`mapping`.
         """
