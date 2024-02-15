@@ -1,38 +1,25 @@
 # API
 
-## Preprocessing
-
 ```{eval-rst}
-.. module:: treedata.pp
-.. currentmodule:: treedata
-
-.. autosummary::
-    :toctree: generated
-
-    pp.basic_preproc
+.. module:: treedata
 ```
 
-## Tools
+The central class:
 
 ```{eval-rst}
-.. module:: treedata.tl
-.. currentmodule:: treedata
-
 .. autosummary::
-    :toctree: generated
+   :toctree: generated/
 
-    tl.basic_tool
+   TreeData
 ```
 
-## Plotting
+## Combining
+
+Combining TreeData objects. See also the section on concatenation.
 
 ```{eval-rst}
-.. module:: treedata.pl
-.. currentmodule:: treedata
-
 .. autosummary::
-    :toctree: generated
+   :toctree: generated/
 
-    pl.basic_plot
-    pl.BasicClass
+   concat
 ```

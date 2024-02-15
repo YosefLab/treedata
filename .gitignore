@@ -26,3 +26,6 @@ __pycache__/
 # IDEs
 /.idea/
 /.vscode/
+
+# Prettier
+/node_modules/
