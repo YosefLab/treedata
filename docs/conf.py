@@ -61,7 +61,12 @@ extensions = [
     *[p.stem for p in (HERE / "extensions").glob("*.py")],
 ]
 
-autosummary_generate = True
+# Inherit docs from anndata
+autodoc_default_options = {
+    "inherited-members": True,
+}
+
+autosummary_generate = True  # Can disabled to avoid inheritance conflicts
 autodoc_member_order = "groupwise"
 default_role = "literal"
 napoleon_google_docstring = False
@@ -98,6 +103,7 @@ intersphinx_mapping = {
     "networkx": ("https://networkx.org/documentation/stable/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
     "h5py": ("https://docs.h5py.org/en/stable/", None),
+    "hdf5plugin": ("https://hdf5plugin.readthedocs.io/en/latest/", None),
 }
 
 # List of patterns, relative to source directory, that match files and

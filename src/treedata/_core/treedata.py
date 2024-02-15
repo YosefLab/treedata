@@ -26,14 +26,14 @@ if TYPE_CHECKING:
 class TreeData(ad.AnnData):
     """AnnData with trees.
 
-    `TreeData` is a light-weight wrapper around :class:`~anndata.AnnData`
-    which adds two additional attributes, `obst` and `vart`, to
-    store trees for observations and variables A `TreeData`
+    :class:`~treedata.TreeData` is a light-weight wrapper around :class:`~anndata.AnnData`
+    which adds two additional attributes, :attr:`obst` and :attr:`vart`, to
+    store trees for observations and variables A :class:`~treedata.TreeData`
     object can be used just like an :class:`~anndata.AnnData` object and stores a
-    data matrix `X` together with annotations
-    of observations `obs` (`obsm`, `obsp`, `obst`),
-    variables `var` (`varm`, `varp`, `vart`),
-    and unstructured annotations `uns`.
+    data matrix :attr:`X` together with annotations
+    of observations :attr:`obs` (:attr:`obsm`, :attr:`obsp`, :attr:`obst`),
+    variables :attr:`var` (:attr:`varm`, :attr:`varp`, :attr:`vart`),
+    and unstructured annotations :attr:`uns`.
 
     Parameters
     ----------
@@ -133,7 +133,7 @@ class TreeData(ad.AnnData):
         """Tree annotation of observations
 
         Stores for each key a :class:`~networkx.DiGraph` with leaf nodes in
-        `obs_names`. Is subset and pruned with `data` but behaves
+        :attr:`obs_names`. Is subset and pruned with `data` but behaves
         otherwise like a :term:`mapping`.
         """
         return self._obst
@@ -143,7 +143,7 @@ class TreeData(ad.AnnData):
         """Tree annotation of variables
 
         Stores for each key a :class:`~networkx.DiGraph` with leaf nodes in
-        `var_names`. Is subset and pruned with `data` but behaves
+        :attr:`var_names`. Is subset and pruned with `data` but behaves
         otherwise like a :term:`mapping`.
         """
         return self._vart
@@ -179,3 +179,7 @@ class TreeData(ad.AnnData):
     def __getitem__(self, index: Index) -> TreeData:
         """Returns a sliced view of the object."""
         raise NotImplementedError("Slicing not yet implemented")
+
+    def concatenate(self) -> None:
+        """Concatenate deprecated, use `treedata.concat` instead."""
+        raise NotImplementedError("Concatenation deprecated, use `treedata.concat` instead")
