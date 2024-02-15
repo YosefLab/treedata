@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Iterable, Mapping, Sequence
-from copy import copy
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -13,25 +12,24 @@ import anndata as ad
 import networkx as nx
 import numpy as np
 import pandas as pd
+from anndata._core.index import Index
 from scipy import sparse
 
 from .aligned_mapping import (
     AxisTrees,
 )
 
-from anndata._core.index import Index
-
 if TYPE_CHECKING:
     from os import PathLike
 
+
 class TreeData(ad.AnnData):
-    """\
-    AnnData with trees.
+    """AnnData with trees.
 
     :class:`~treedata.TreeData` is a light-weight wrapper around :class:`~anndata.AnnData`
-    which adds two additional attributes, :attr:`obst` and :attr:`vart`, to 
-    store trees for observations and variables A :class:`~treedata.TreeData` 
-    object can be used just like an :class:`~anndata.AnnData` object and stores a 
+    which adds two additional attributes, :attr:`obst` and :attr:`vart`, to
+    store trees for observations and variables A :class:`~treedata.TreeData`
+    object can be used just like an :class:`~anndata.AnnData` object and stores a
     data matrix :attr:`X` together with annotations
     of observations :attr:`obs` (:attr:`obsm`, :attr:`obsp`, :attr:`obst`),
     variables :attr:`var` (:attr:`varm`, :attr:`varp`, :attr:`vart`),
@@ -74,6 +72,7 @@ class TreeData(ad.AnnData):
     allow_tree_overlap
         Whether overlapping trees are allowed. Default is False.
     """
+
     def __init__(
         self,
         X: np.ndarray | sparse.spmatrix | pd.DataFrame | None = None,
@@ -109,13 +108,10 @@ class TreeData(ad.AnnData):
             filemode=filemode,
             asview=asview,
         )
-        
+
         if label is not None:
             if label in self.obs.columns:
-                warnings.warn(
-                    f"Tree label {label} already present in .obs, "
-                    "overwriting it"
-                )
+                warnings.warn(f"Tree label {label} already present in .obs overwriting it", stacklevel=2)
             self.obs[label] = pd.NA
 
         self._tree_label = label
@@ -127,29 +123,27 @@ class TreeData(ad.AnnData):
     def obst_keys(self) -> list[str]:
         """List keys of variable annotation :attr:`obst`."""
         return list(self._obst.keys())
-    
+
     def vart_keys(self) -> list[str]:
         """List keys of variable annotation :attr:`vart`."""
         return list(self._vart.keys())
-    
+
     @property
     def obst(self) -> AxisTrees:
-        """\
-        Tree annotation of observations
+        """Tree annotation of observations
 
-        Stores for each key a :class:`~nx.DiGraph` with leaf nodes in 
-        `obs_names`. Is subset and pruned with `data` but behaves 
+        Stores for each key a :class:`~nx.DiGraph` with leaf nodes in
+        `obs_names`. Is subset and pruned with `data` but behaves
         otherwise like a :term:`mapping`.
         """
         return self._obst
-    
+
     @property
     def vart(self):
-        """\
-        Tree annotation of variables
+        """Tree annotation of variables
 
-        Stores for each key a :class:`~nx.DiGraph` with leaf nodes in 
-        `var_names`. Is subset and pruned with `data` but behaves 
+        Stores for each key a :class:`~nx.DiGraph` with leaf nodes in
+        `var_names`. Is subset and pruned with `data` but behaves
         otherwise like a :term:`mapping`.
         """
         return self._vart
@@ -170,18 +164,7 @@ class TreeData(ad.AnnData):
         else:
             backed_at = ""
         descr = f"TreeData object with n_obs × n_vars = {n_obs} × {n_vars}{backed_at}"
-        for attr in [
-            "obs",
-            "var",
-            "uns",
-            "obsm",
-            "varm",
-            "layers",
-            "obsp",
-            "varp",
-            "obst",
-            "vart"
-        ]:
+        for attr in ["obs", "var", "uns", "obsm", "varm", "layers", "obsp", "varp", "obst", "vart"]:
             keys = getattr(self, attr).keys()
             if len(keys) > 0:
                 descr += f"\n    {attr}: {str(list(keys))[1:-1]}"
@@ -192,7 +175,7 @@ class TreeData(ad.AnnData):
             return "View of " + self._gen_repr(self.n_obs, self.n_vars)
         else:
             return self._gen_repr(self.n_obs, self.n_vars)
-        
+
     def __getitem__(self, index: Index) -> TreeData:
         """Returns a sliced view of the object."""
         raise NotImplementedError("Slicing not yet implemented")

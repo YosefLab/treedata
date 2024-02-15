@@ -1,10 +1,11 @@
 import networkx as nx
-import numpy as np
+
 
 def get_leaves(tree: nx.DiGraph) -> list[str]:
     """Get the leaves of a tree."""
     leaves = [n for n in tree.nodes if tree.out_degree(n) == 0]
     return leaves
+
 
 def get_root(tree: nx.DiGraph) -> str:
     """Get the root of a tree."""
