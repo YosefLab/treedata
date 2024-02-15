@@ -28,7 +28,7 @@ class TreeData(ad.AnnData):
 
     :class:`~treedata.TreeData` is a light-weight wrapper around :class:`~anndata.AnnData`
     which adds two additional attributes, :attr:`obst` and :attr:`vart`, to
-    store trees for observations and variables A :class:`~treedata.TreeData`
+    store trees for observations and variables. A :class:`~treedata.TreeData`
     object can be used just like an :class:`~anndata.AnnData` object and stores a
     data matrix :attr:`X` together with annotations
     of observations :attr:`obs` (:attr:`obsm`, :attr:`obsp`, :attr:`obst`),
@@ -67,9 +67,9 @@ class TreeData(ad.AnnData):
     asview
         Initialize as view. `X` has to be an AnnData object.
     label
-        Column in `.obs` to place tree id in. Default is "tree".
+        Columns in `.obs` and `.var` to place tree key in. Default is "tree".
         If it's None, no column is added.
-    allow_tree_overlap
+    allow_overlap
         Whether overlapping trees are allowed. Default is False.
     """
 
@@ -91,7 +91,7 @@ class TreeData(ad.AnnData):
         filemode: Literal["r", "r+"] | None = None,
         asview: bool = False,
         label: str | None = "tree",
-        allow_tree_overlap: bool = False,
+        allow_overlap: bool = False,
     ):
         super().__init__(
             X=X,
@@ -111,11 +111,14 @@ class TreeData(ad.AnnData):
 
         if label is not None:
             if label in self.obs.columns:
-                warnings.warn(f"Tree label {label} already present in .obs overwriting it", stacklevel=2)
-            self.obs[label] = pd.NA
+                warnings.warn(f"label {label} already present in .obs overwriting it", stacklevel=2)
+                self.obs[label] = pd.NA
+            if label in self.var.columns:
+                warnings.warn(f"label {label} already present in .var overwriting it", stacklevel=2)
+                self.var[label] = pd.NA
 
         self._tree_label = label
-        self._allow_tree_overlap = allow_tree_overlap
+        self._allow_overlap = allow_overlap
 
         self._obst = AxisTrees(self, 0, vals=obst)
         self._vart = AxisTrees(self, 1, vals=vart)
@@ -147,6 +150,16 @@ class TreeData(ad.AnnData):
         otherwise like a :term:`mapping`.
         """
         return self._vart
+
+    @property
+    def allow_overlap(self) -> bool:
+        """Whether overlapping trees are allowed."""
+        return self._allow_overlap
+
+    @property
+    def label(self) -> str | None:
+        """Column in `.obs` and .`obs` with tree keys"""
+        return self._tree_label
 
     @obst.setter
     def obst(self, value):
@@ -183,3 +196,27 @@ class TreeData(ad.AnnData):
     def concatenate(self) -> None:
         """Concatenate deprecated, use `treedata.concat` instead."""
         raise NotImplementedError("Concatenation deprecated, use `treedata.concat` instead")
+
+    def to_adata(self) -> ad.AnnData:
+        """Convert this TreeData object to an AnnData object."""
+        return ad.AnnData(self)
+
+    def copy(self) -> TreeData:
+        """Full copy of the object."""
+        adata = super().copy()
+
+        # remove label from obs and var
+        if self.label is not None:
+            if self.label in adata.obs.columns:
+                adata.obs.drop(columns=self.label, inplace=True)
+            if self.label in adata.var.columns:
+                adata.var.drop(columns=self.label, inplace=True)
+        # create a new TreeData object
+        treedata_copy = TreeData(
+            adata,
+            obst=self.obst.copy(),
+            vart=self.vart.copy(),
+            label=self.label,
+            allow_overlap=self.allow_overlap,
+        )
+        return treedata_copy

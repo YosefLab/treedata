@@ -12,7 +12,7 @@ import anndata as ad
 import networkx as nx
 import pandas as pd
 
-from treedata._utils import get_leaves
+from treedata._utils import get_leaves, get_root
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -29,6 +29,7 @@ class AxisTrees(cabc.MutableMapping):
         vals: Mapping | None = None,
     ):
         self._parent = parent
+        self._dimnames = ("obs", "var")
         if axis not in (0, 1):
             raise ValueError()
         self._axis = axis
@@ -59,22 +60,24 @@ class AxisTrees(cabc.MutableMapping):
         leaves = get_leaves(value)
         if not set(leaves).issubset(self.dim_names):
             raise ValueError(f"Leaf nodes of tree for key {key} must be in {self.dim}_names")
+        # Check root
+        _ = get_root(value)
         # Check overlap
-        if not self.parent._allow_tree_overlap:
+        if not self.parent.allow_overlap:
             if set(leaves).intersection(self._membership.keys()):
                 raise ValueError(f"Leaf nodes of tree for key {key} overlap with other trees")
         return value
 
     def _update_tree_labels(self):
         if self.parent._tree_label is not None:
-            if self.parent._allow_tree_overlap:
+            if self.parent.allow_overlap:
                 mapping = self._membership
             else:
                 mapping = {k: v[0] for k, v in self._membership.items()}
             self.parent.obs[self.parent._tree_label] = self.parent.obs_names.map(mapping)
 
     def copy(self):
-        d = self._actual_class(self.parent, self._axis)
+        d = AxisTrees(self.parent, self._axis)
         for k, v in self.items():
             d[k] = v.copy()
         return d
