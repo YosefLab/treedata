@@ -12,7 +12,7 @@ import anndata as ad
 import networkx as nx
 import numpy as np
 import pandas as pd
-from anndata._core.index import Index
+from anndata._core.index import Index, Index1D
 from scipy import sparse
 
 from .aligned_mapping import (
@@ -92,36 +92,98 @@ class TreeData(ad.AnnData):
         asview: bool = False,
         label: str | None = "tree",
         allow_overlap: bool = False,
+        *,
+        obsp: np.ndarray | Mapping[str, Sequence[Any]] | None = None,
+        varp: np.ndarray | Mapping[str, Sequence[Any]] | None = None,
+        oidx: Index1D = None,
+        vidx: Index1D = None,
     ):
-        super().__init__(
+        if asview:
+            if not isinstance(X, TreeData):
+                raise ValueError("If asview is True, X has to be an TreeData object")
+            self._init_as_view(X, oidx, vidx)
+        else:
+            self._init_as_actual(
+                X=X,
+                obs=obs,
+                var=var,
+                uns=uns,
+                obsm=obsm,
+                varm=varm,
+                obsp=obsp,
+                varp=varp,
+                obst=obst,
+                vart=vart,
+                raw=raw,
+                layers=layers,
+                dtype=dtype,
+                shape=shape,
+                filename=filename,
+                filemode=filemode,
+                label=label,
+                allow_overlap=allow_overlap,
+            )
+
+    def _init_as_actual(
+        self,
+        X=None,
+        obs=None,
+        var=None,
+        uns=None,
+        obsm=None,
+        varm=None,
+        varp=None,
+        obsp=None,
+        obst=None,
+        vart=None,
+        raw=None,
+        layers=None,
+        dtype=None,
+        shape=None,
+        filename=None,
+        filemode=None,
+        label=None,
+        allow_overlap=None,
+    ):
+        super()._init_as_actual(
             X=X,
             obs=obs,
             var=var,
             uns=uns,
             obsm=obsm,
             varm=varm,
+            varp=varp,
+            obsp=obsp,
             raw=raw,
             layers=layers,
             dtype=dtype,
             shape=shape,
             filename=filename,
             filemode=filemode,
-            asview=asview,
         )
 
         if label is not None:
-            if label in self.obs.columns:
-                warnings.warn(f"label {label} already present in .obs overwriting it", stacklevel=2)
-                self.obs[label] = pd.NA
-            if label in self.var.columns:
-                warnings.warn(f"label {label} already present in .var overwriting it", stacklevel=2)
-                self.var[label] = pd.NA
-
+            for attr in ["obs", "var"]:
+                if label in getattr(self, attr).columns:
+                    warnings.warn(f"label {label} already present in .{attr} overwriting it", stacklevel=2)
+                    getattr(self, attr)[label] = pd.NA
         self._tree_label = label
+
         self._allow_overlap = allow_overlap
 
         self._obst = AxisTrees(self, 0, vals=obst)
         self._vart = AxisTrees(self, 1, vals=vart)
+
+    def _init_as_view(self, tdata_ref: TreeData, oidx: Index, vidx: Index):
+        super()._init_as_view(tdata_ref, oidx, vidx)
+
+        # view of obst and vart
+        self._obst = tdata_ref.obst._view(self, (oidx,))
+        self._vart = tdata_ref.vart._view(self, (vidx,))
+
+        # set attributes
+        self._tree_label = tdata_ref._tree_label
+        self._allow_overlap = tdata_ref._allow_overlap
 
     def obst_keys(self) -> list[str]:
         """List keys of variable annotation `obst`."""
@@ -191,7 +253,8 @@ class TreeData(ad.AnnData):
 
     def __getitem__(self, index: Index) -> TreeData:
         """Returns a sliced view of the object."""
-        raise NotImplementedError("Slicing not yet implemented")
+        oidx, vidx = self._normalize_indices(index)
+        return TreeData(self, oidx=oidx, vidx=vidx, asview=True)
 
     def concatenate(self) -> None:
         """Concatenate deprecated, use `treedata.concat` instead."""

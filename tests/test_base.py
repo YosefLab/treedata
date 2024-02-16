@@ -62,19 +62,20 @@ def test_tree_contains(X, tree, dim):
 
 
 @pytest.mark.filterwarnings
-def test_tree_label(X, tree):
+@pytest.mark.parametrize("dim", ["obs", "var"])
+def test_tree_label(X, tree, dim):
     # Test tree label
     second_tree = nx.DiGraph()
     second_tree.add_edges_from([("root", "2")])
-    tdata = td.TreeData(X, obst={"0": tree, "1": second_tree}, label="tree")
-    assert tdata.obs["tree"].tolist() == ["0", "0", "1"]
+    tdata = td.TreeData(X, obst={"0": tree, "1": second_tree}, vart={"0": tree, "1": second_tree}, label="tree")
+    assert getattr(tdata, dim)["tree"].tolist() == ["0", "0", "1"]
     # Test tree label with overlap
-    tdata = td.TreeData(X, obst={"0": tree, "1": tree}, label="tree", allow_overlap=True)
-    assert tdata.obs["tree"].tolist() == [["0", "1"], ["0", "1"], []]
+    tdata = td.TreeData(X, obst={"0": tree, "1": tree}, label="tree", vart={"0": tree, "1": tree}, allow_overlap=True)
+    assert getattr(tdata, dim)["tree"].tolist() == [["0", "1"], ["0", "1"], []]
     # Test label already present warning
-    obs = pd.DataFrame({"tree": ["bad", "bad", "bad"]})
+    df = pd.DataFrame({"tree": ["bad", "bad", "bad"]})
     with pytest.warns(UserWarning):
-        _ = td.TreeData(X, obst={"tree": tree}, label="tree", obs=obs)
+        tdata = td.TreeData(X, label="tree", obs=df, var=df)
 
 
 def test_tree_overlap(X, tree):
