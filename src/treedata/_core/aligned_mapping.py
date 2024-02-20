@@ -16,7 +16,7 @@ import anndata as ad
 import networkx as nx
 import pandas as pd
 
-from treedata._utils import get_leaves, get_root, subset_tree
+from treedata._utils import subset_tree
 
 if TYPE_CHECKING:
     from anndata import AnnData
@@ -39,34 +39,45 @@ class AxisTreesBase(cabc.MutableMapping):
     def _ipython_key_completions_(self) -> list[str]:
         return list(self.keys())
 
-    def _validate_value(self, value: nx.DiGraph, key: str) -> nx.DiGraph:
+    def _validate_tree(self, tree: nx.DiGraph, key: str) -> nx.DiGraph:
         # Check value type
-        if not isinstance(value, nx.DiGraph):
-            raise ValueError(f"Tree for key {key} must be a nx.DiGraph")
-        # Check acyclic
-        if not nx.is_directed_acyclic_graph(value):
-            raise ValueError(f"Tree for key {key} cannot have cycles")
-        # Check fully connected
-        if not nx.is_weakly_connected(value):
-            raise ValueError(f"Tree for key {key} must be fully connected")
+        if not isinstance(tree, nx.DiGraph):
+            raise ValueError(f"Value for key {key} must be a nx.DiGraph")
+        # Check tree
+        if tree.number_of_nodes() != tree.number_of_edges() + 1:
+            raise ValueError(f"Value for key {key} must be a tree")
+        root_count = 0
+        leaves = set()
+        for node in tree.nodes:
+            if tree.in_degree(node) == 0:
+                root_count += 1
+            elif tree.in_degree(node) > 1:
+                raise ValueError(f"Value for key {key} must be a tree")
+            if tree.out_degree(node) == 0:
+                leaves.add(node)
+        if root_count != 1:
+            raise ValueError(f"Value for key {key} must be a tree")
         # Check alignment
-        leaves = get_leaves(value)
-        if not set(leaves).issubset(self.dim_names):
-            raise ValueError(f"Leaf nodes of tree for key {key} must be in {self.dim}_names")
-        # Check root
-        _ = get_root(value)
+        if not leaves.issubset(self.dim_names):
+            raise ValueError(f"Leaf names in must be in {self.dim}_names")
         # Check overlap
         if not self.parent.allow_overlap:
-            if set(leaves).intersection(self._membership.keys()):
-                raise ValueError(f"Leaf nodes of tree for key {key} overlap with other trees")
-        return value
+            if key in self._tree_to_leaf:
+                new_leaves = leaves.difference(self._tree_to_leaf[key])
+            else:
+                new_leaves = leaves
+            if new_leaves.intersection(self._leaf_to_tree.keys()):
+                raise ValueError(
+                    "Leaf names overlap with leaf names of other trees.", "Set `allow_overlap=True` to allow this"
+                )
+        return tree, leaves
 
     def _update_tree_labels(self):
         if self.parent._tree_label is not None:
             if self.parent.allow_overlap:
-                mapping = self._membership
+                mapping = self._leaf_to_tree
             else:
-                mapping = {k: v[0] for k, v in self._membership.items()}
+                mapping = {k: v[0] for k, v in self._leaf_to_tree.items()}
             getattr(self.parent, self.dim)[self.parent._tree_label] = getattr(self.parent, f"{self.dim}_names").map(
                 mapping
             )
@@ -117,32 +128,35 @@ class AxisTrees(AxisTreesBase):
             raise ValueError()
         self._axis = axis
         self._data = {}
-        self._membership = defaultdict(list)
+        self._tree_to_leaf = defaultdict(set)
+        self._leaf_to_tree = defaultdict(list)
         if vals is not None:
             self.update(vals)
 
     def __getitem__(self, key: str) -> nx.DiGraph:
-        return self._data[key]
+        return nx.graphviews.generic_graph_view(self._data[key])
 
     def __setitem__(self, key: str, value: nx.DiGraph):
-        value = self._validate_value(value, key)
+        value, leaves = self._validate_tree(value, key)
 
-        leaves = get_leaves(value)
         for leaf in leaves:
-            self._membership[leaf].append(key)
+            self._leaf_to_tree[leaf].append(key)
+        self._tree_to_leaf[key] = leaves
 
         if not self.parent.is_view:
             self._update_tree_labels()
+
         self._data[key] = value
 
     def __delitem__(self, key: str):
-        leaves = get_leaves(self._data[key])
-        for leaf in leaves:
-            self._membership[leaf].remove(key)
-            if not self._membership[leaf]:
-                del self._membership[leaf]
+        for leaf in self._tree_to_leaf[key]:
+            self._leaf_to_tree[leaf].remove(key)
+            if not self._leaf_to_tree[leaf]:
+                del self._leaf_to_tree[leaf]
+        del self._tree_to_leaf[key]
 
         self._update_tree_labels()
+
         del self._data[key]
 
     def __len__(self) -> int:
@@ -169,9 +183,8 @@ class AxisTreesView(AxisTreesBase):
         self._axis = parent_mapping._axis
 
     def __getitem__(self, key: str) -> nx.DiGraph:
-        # Consider caching the subset trees
-        leaves = get_leaves(self.parent_mapping[key])
-        subset_leaves = set(leaves).intersection(self.dim_names.values)
+        leaves = self.parent_mapping._tree_to_leaf[key]
+        subset_leaves = leaves.intersection(self.dim_names.values)
         return subset_tree(self.parent_mapping[key], subset_leaves, asview=True)
 
     def __setitem__(self, key: str, value: nx.DiGraph):

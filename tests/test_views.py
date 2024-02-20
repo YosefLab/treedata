@@ -54,6 +54,10 @@ def test_views_subset_tree(tdata):
     tdata_subset = tdata[["7", "8", "11"], :]
     edges = list(tdata_subset.obst["tree"].edges)
     assert edges == expected_edges
+    # now transition to actual object
+    tdata_subset = tdata_subset.copy()
+    edges = list(tdata_subset.obst["tree"].edges)
+    assert edges == expected_edges
 
 
 def test_views_mutability(tdata):

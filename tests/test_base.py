@@ -24,11 +24,17 @@ def tree():
     yield tree
 
 
+def check_graph_equality(g1, g2):
+    assert g1.nodes == g2.nodes
+    assert g1.edges == g2.edges
+
+
 def test_creation(X, adata, tree):
     # Test creation with np array
     tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, label=None)
-    assert tdata.obst["tree"] == tree
-    assert tdata.vart["tree"] == tree
+    print(type(tdata))
+    check_graph_equality(tdata.obst["tree"], tree)
+    check_graph_equality(tdata.vart["tree"], tree)
     # Test creation with anndata
     tdata = td.TreeData(adata)
     assert tdata.X is adata.X
@@ -37,14 +43,14 @@ def test_creation(X, adata, tree):
 @pytest.mark.parametrize("dim", ["obs", "var"])
 def test_tree_keys(X, tree, dim):
     tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, label=None)
-    assert getattr(tdata, f"{dim}t_keys")() == ["tree"]
+    check_graph_equality(getattr(tdata, f"{dim}t")["tree"], tree)
 
 
 @pytest.mark.parametrize("dim", ["obs", "var"])
 def test_tree_set(X, tree, dim):
     tdata = td.TreeData(X)
     setattr(tdata, f"{dim}t", {"tree": tree})
-    assert getattr(tdata, f"{dim}t")["tree"] == tree
+    check_graph_equality(getattr(tdata, f"{dim}t")["tree"], tree)
 
 
 @pytest.mark.parametrize("dim", ["obs", "var"])
@@ -86,7 +92,8 @@ def test_tree_overlap(X, tree):
         tdata = td.TreeData(X, obst={"0": tree, "1": second_tree}, allow_overlap=False)
     # Test overlap allowed
     tdata = td.TreeData(X, obst={"0": tree, "1": second_tree}, allow_overlap=True)
-    assert tdata.obst == {"0": tree, "1": second_tree}
+    check_graph_equality(tdata.obst["0"], tree)
+    check_graph_equality(tdata.obst["1"], second_tree)
 
 
 def test_repr(X, tree):
@@ -99,6 +106,21 @@ def test_repr(X, tree):
     # AxisTrees
     expected_repr = "AxisTrees with keys: tree"
     assert repr(tdata.obst) == expected_repr
+
+
+def test_mutability(X, tree):
+    tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, label=None)
+    # Toplogy is immutable
+    with pytest.raises(nx.NetworkXError):
+        tdata.obst["tree"].remove_node("0")
+    # Attributes are mutable
+    nx.set_node_attributes(tdata.obst["tree"], True, "test")
+    assert all(tdata.obst["tree"].nodes[node]["test"] for node in tdata.obst["tree"].nodes)
+    # Topology mutable on copy
+    tree = tdata.obst["tree"].copy()
+    tree.remove_node("1")
+    tdata.obst["tree"] = tree
+    assert list(tdata.obst["tree"].nodes) == ["root", "0"]
 
 
 def test_bad_tree(X):
