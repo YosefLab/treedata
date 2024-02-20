@@ -24,27 +24,40 @@ def tree():
     yield tree
 
 
+def check_graph_equality(g1, g2):
+    assert g1.nodes == g2.nodes
+    assert g1.edges == g2.edges
+
+
 def test_creation(X, adata, tree):
     # Test creation with np array
     tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, label=None)
-    assert tdata.obst["tree"] == tree
-    assert tdata.vart["tree"] == tree
+    print(type(tdata))
+    check_graph_equality(tdata.obst["tree"], tree)
+    check_graph_equality(tdata.vart["tree"], tree)
     # Test creation with anndata
     tdata = td.TreeData(adata)
     assert tdata.X is adata.X
 
 
-@pytest.mark.parametrize("dim", ["obs", "var"])
-def test_tree_keys(X, tree, dim):
+@pytest.mark.parametrize("axis", [0, 1])
+def test_attributes(X, tree, axis):
+    dim = ["obs", "var"][axis]
     tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, label=None)
-    assert getattr(tdata, f"{dim}t_keys")() == ["tree"]
+    assert getattr(tdata, f"{dim}t").axes == (axis,)
+    assert getattr(tdata, f"{dim}t").attrname == (f"{dim}t")
+    assert getattr(tdata, f"{dim}t").dim == dim
+    assert getattr(tdata, f"{dim}t").parent is tdata
+    assert list(getattr(tdata, f"{dim}t").dim_names) == ["0", "1", "2"]
+    assert tdata.allow_overlap is False
+    assert tdata.label is None
 
 
 @pytest.mark.parametrize("dim", ["obs", "var"])
 def test_tree_set(X, tree, dim):
     tdata = td.TreeData(X)
     setattr(tdata, f"{dim}t", {"tree": tree})
-    assert getattr(tdata, f"{dim}t")["tree"] == tree
+    check_graph_equality(getattr(tdata, f"{dim}t")["tree"], tree)
 
 
 @pytest.mark.parametrize("dim", ["obs", "var"])
@@ -62,19 +75,20 @@ def test_tree_contains(X, tree, dim):
 
 
 @pytest.mark.filterwarnings
-def test_tree_label(X, tree):
+@pytest.mark.parametrize("dim", ["obs", "var"])
+def test_tree_label(X, tree, dim):
     # Test tree label
     second_tree = nx.DiGraph()
     second_tree.add_edges_from([("root", "2")])
-    tdata = td.TreeData(X, obst={"0": tree, "1": second_tree}, label="tree")
-    assert tdata.obs["tree"].tolist() == ["0", "0", "1"]
+    tdata = td.TreeData(X, obst={"0": tree, "1": second_tree}, vart={"0": tree, "1": second_tree}, label="tree")
+    assert getattr(tdata, dim)["tree"].tolist() == ["0", "0", "1"]
     # Test tree label with overlap
-    tdata = td.TreeData(X, obst={"0": tree, "1": tree}, label="tree", allow_overlap=True)
-    assert tdata.obs["tree"].tolist() == [["0", "1"], ["0", "1"], []]
+    tdata = td.TreeData(X, obst={"0": tree, "1": tree}, label="tree", vart={"0": tree, "1": tree}, allow_overlap=True)
+    assert getattr(tdata, dim)["tree"].tolist() == [["0", "1"], ["0", "1"], []]
     # Test label already present warning
-    obs = pd.DataFrame({"tree": ["bad", "bad", "bad"]})
+    df = pd.DataFrame({"tree": ["bad", "bad", "bad"]})
     with pytest.warns(UserWarning):
-        _ = td.TreeData(X, obst={"tree": tree}, label="tree", obs=obs)
+        tdata = td.TreeData(X, label="tree", obs=df, var=df)
 
 
 def test_tree_overlap(X, tree):
@@ -85,7 +99,8 @@ def test_tree_overlap(X, tree):
         tdata = td.TreeData(X, obst={"0": tree, "1": second_tree}, allow_overlap=False)
     # Test overlap allowed
     tdata = td.TreeData(X, obst={"0": tree, "1": second_tree}, allow_overlap=True)
-    assert tdata.obst == {"0": tree, "1": second_tree}
+    check_graph_equality(tdata.obst["0"], tree)
+    check_graph_equality(tdata.obst["1"], second_tree)
 
 
 def test_repr(X, tree):
@@ -100,6 +115,21 @@ def test_repr(X, tree):
     assert repr(tdata.obst) == expected_repr
 
 
+def test_mutability(X, tree):
+    tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, label=None)
+    # Toplogy is immutable
+    with pytest.raises(nx.NetworkXError):
+        tdata.obst["tree"].remove_node("0")
+    # Attributes are mutable
+    nx.set_node_attributes(tdata.obst["tree"], True, "test")
+    assert all(tdata.obst["tree"].nodes[node]["test"] for node in tdata.obst["tree"].nodes)
+    # Topology mutable on copy
+    tree = tdata.obst["tree"].copy()
+    tree.remove_node("1")
+    tdata.obst["tree"] = tree
+    assert list(tdata.obst["tree"].nodes) == ["root", "0"]
+
+
 def test_bad_tree(X):
     # Not directed graph
     not_di_graph = nx.Graph()
@@ -108,6 +138,7 @@ def test_bad_tree(X):
     # Has cycle
     has_cycle = nx.DiGraph()
     has_cycle.add_edges_from([("0", "1"), ("1", "0")])
+    has_cycle.add_node("2")
     with pytest.raises(ValueError):
         _ = td.TreeData(X, obst={"tree": has_cycle})
     # Not fully connected
@@ -122,7 +153,7 @@ def test_bad_tree(X):
         _ = td.TreeData(X, obst={"tree": bad_leaves})
     # Multiple roots
     multi_root = nx.DiGraph()
-    multi_root.add_edges_from([("root", "0"), ("bad", "0")])
+    multi_root.add_edges_from([("0", "1"), ("1", "0"), ("2", "3")])
     with pytest.raises(ValueError):
         _ = td.TreeData(X, obst={"tree": multi_root})
 
