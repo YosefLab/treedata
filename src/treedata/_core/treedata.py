@@ -182,7 +182,7 @@ class TreeData(ad.AnnData):
             self._vart = AxisTrees(self, 1, vals=vart)
 
     def _init_as_view(self, tdata_ref: TreeData, oidx: Index, vidx: Index):
-        super()._init_as_view(tdata_ref, oidx, vidx)
+        super()._init_as_view(tdata_ref, oidx=oidx, vidx=vidx)
 
         # view of obst and vart
         self._obst = tdata_ref.obst._view(self, (oidx,))

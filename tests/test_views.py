@@ -4,15 +4,13 @@ import pandas as pd
 import pytest
 
 import treedata as td
-from treedata._utils import get_root
 
 
 @pytest.fixture
 def tree():
     tree = nx.balanced_tree(r=2, h=3, create_using=nx.DiGraph)
     tree = nx.relabel_nodes(tree, {i: str(i) for i in tree.nodes})
-    root = get_root(tree)
-    depths = nx.single_source_shortest_path_length(tree, root)
+    depths = nx.single_source_shortest_path_length(tree, "0")
     nx.set_node_attributes(tree, values=depths, name="depth")
     yield tree
 
@@ -34,6 +32,16 @@ def test_views(tdata):
         tdata_subset.obs["test"] = range(2)
     assert not tdata_subset.is_view
     assert tdata_subset.obs["test"].tolist() == list(range(2))
+
+
+# this test should pass once anndata bug is fixed
+# See https://github.com/scverse/anndata/issues/1382
+@pytest.mark.xfail
+def test_views_creation(tdata):
+    tdata_view = td.TreeData(tdata, asview=True)
+    assert tdata_view.is_view
+    with pytest.raises(ValueError):
+        _ = td.TreeData(np.zeros(shape=(3, 3)), asview=False)
 
 
 def test_views_subset_tree(tdata):
@@ -58,6 +66,7 @@ def test_views_subset_tree(tdata):
     tdata_subset = tdata_subset.copy()
     edges = list(tdata_subset.obst["tree"].edges)
     assert edges == expected_edges
+    assert len(tdata.obst["tree"].edges) == 14
 
 
 def test_views_mutability(tdata):
@@ -76,7 +85,7 @@ def test_views_mutability(tdata):
         tdata_subset.obst["tree"].remove_node("8")
 
 
-def test_set(tdata):
+def test_views_set(tdata):
     tdata_subset = tdata[[0, 1, 4], :]
     # bad assignment
     bad_tree = nx.DiGraph()
@@ -94,7 +103,7 @@ def test_set(tdata):
     assert list(tdata_subset.obst["new_tree"].edges) == [("0", "8")]
 
 
-def test_del(tdata):
+def test_views_del(tdata):
     tdata_subset = tdata[[0, 1, 4], :]
     # bad deletion
     with pytest.raises(KeyError):
@@ -107,12 +116,12 @@ def test_del(tdata):
     assert list(tdata_subset.obst.keys()) == []
 
 
-def test_contains(tdata):
+def test_views_contains(tdata):
     tdata_subset = tdata[[0, 1, 4], :]
     assert "tree" in tdata_subset.obst
     assert "bad" not in tdata_subset.obst
 
 
-def test_len(tdata):
+def test_views_len(tdata):
     tdata_subset = tdata[[0, 1, 4], :]
     assert len(tdata_subset.obst) == 1

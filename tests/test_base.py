@@ -40,10 +40,17 @@ def test_creation(X, adata, tree):
     assert tdata.X is adata.X
 
 
-@pytest.mark.parametrize("dim", ["obs", "var"])
-def test_tree_keys(X, tree, dim):
+@pytest.mark.parametrize("axis", [0, 1])
+def test_attributes(X, tree, axis):
+    dim = ["obs", "var"][axis]
     tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, label=None)
-    check_graph_equality(getattr(tdata, f"{dim}t")["tree"], tree)
+    assert getattr(tdata, f"{dim}t").axes == (axis,)
+    assert getattr(tdata, f"{dim}t").attrname == (f"{dim}t")
+    assert getattr(tdata, f"{dim}t").dim == dim
+    assert getattr(tdata, f"{dim}t").parent is tdata
+    assert list(getattr(tdata, f"{dim}t").dim_names) == ["0", "1", "2"]
+    assert tdata.allow_overlap is False
+    assert tdata.label is None
 
 
 @pytest.mark.parametrize("dim", ["obs", "var"])
@@ -131,6 +138,7 @@ def test_bad_tree(X):
     # Has cycle
     has_cycle = nx.DiGraph()
     has_cycle.add_edges_from([("0", "1"), ("1", "0")])
+    has_cycle.add_node("2")
     with pytest.raises(ValueError):
         _ = td.TreeData(X, obst={"tree": has_cycle})
     # Not fully connected
@@ -145,7 +153,7 @@ def test_bad_tree(X):
         _ = td.TreeData(X, obst={"tree": bad_leaves})
     # Multiple roots
     multi_root = nx.DiGraph()
-    multi_root.add_edges_from([("root", "0"), ("bad", "0")])
+    multi_root.add_edges_from([("0", "1"), ("1", "0"), ("2", "3")])
     with pytest.raises(ValueError):
         _ = td.TreeData(X, obst={"tree": multi_root})
 

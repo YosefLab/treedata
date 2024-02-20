@@ -53,6 +53,8 @@ class AxisTreesBase(cabc.MutableMapping):
         for node in tree.nodes:
             if tree.in_degree(node) == 0:
                 root_count += 1
+                if tree.out_degree(node) == 0:
+                    raise ValueError(f"Value for key {key} must be fully connected")
             elif tree.in_degree(node) > 1:
                 raise ValueError(f"Value for key {key} must be a tree")
             if tree.out_degree(node) == 0:
@@ -196,8 +198,6 @@ class AxisTreesView(AxisTreesBase):
         )
         with view_update(self.parent, self.attrname, ()) as new_mapping:
             new_mapping[key] = value
-        print("here2")
-        print(key)
 
     def __delitem__(self, key: str):
         if key not in self:
@@ -222,7 +222,7 @@ class AxisTreesView(AxisTreesBase):
 
 @contextmanager
 def view_update(tdata_view: TreeData, attr_name: str, keys: tuple[str, ...]):
-    """Context manager for updating a view of an AnnData object.
+    """Context manager for updating a view of an TreeData object.
 
     Contains logic for "actualizing" a view. Yields the object to be modified in-place.
 
@@ -241,8 +241,6 @@ def view_update(tdata_view: TreeData, attr_name: str, keys: tuple[str, ...]):
     """
     new = tdata_view.copy()
     attr = getattr(new, attr_name)
-    for key in attr:
-        print(key)
     container = reduce(lambda d, k: d[k], keys, attr)
     yield container
     tdata_view._init_as_actual(new)
