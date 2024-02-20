@@ -20,7 +20,7 @@ def tree():
 @pytest.fixture
 def tdata(tree):
     df = pd.DataFrame({"anno": range(8)}, index=[str(i) for i in range(7, 15)])
-    yield td.TreeData(X=np.zeros((8, 8)), obst={"tree": tree}, vart={"tree": tree}, obs=df, var=df)
+    yield td.TreeData(X=np.zeros((8, 8)), obst={"tree": tree}, vart={"tree": tree}, obs=df, var=df, allow_overlap=True)
 
 
 def test_views(tdata):
@@ -74,3 +74,45 @@ def test_views_mutability(tdata):
     # cannot mutate structure of graph
     with pytest.raises(nx.NetworkXError):
         tdata_subset.obst["tree"].remove_node("8")
+
+
+def test_set(tdata):
+    tdata_subset = tdata[[0, 1, 4], :]
+    # bad assignment
+    bad_tree = nx.DiGraph()
+    bad_tree.add_edge("0", "bad")
+    with pytest.raises(ValueError):
+        tdata_subset.obst["new_tree"] = bad_tree
+    assert tdata_subset.is_view
+    # good assignment actualizes object
+    new_tree = nx.DiGraph()
+    new_tree.add_edge("0", "8")
+    with pytest.warns(UserWarning):
+        tdata_subset.obst["new_tree"] = new_tree
+    assert not tdata_subset.is_view
+    assert list(tdata_subset.obst.keys()) == ["tree", "new_tree"]
+    assert list(tdata_subset.obst["new_tree"].edges) == [("0", "8")]
+
+
+def test_del(tdata):
+    tdata_subset = tdata[[0, 1, 4], :]
+    # bad deletion
+    with pytest.raises(KeyError):
+        del tdata_subset.obst["bad"]
+    assert tdata_subset.is_view
+    # good deletion actualizes object
+    with pytest.warns(UserWarning):
+        del tdata_subset.obst["tree"]
+    assert not tdata_subset.is_view
+    assert list(tdata_subset.obst.keys()) == []
+
+
+def test_contains(tdata):
+    tdata_subset = tdata[[0, 1, 4], :]
+    assert "tree" in tdata_subset.obst
+    assert "bad" not in tdata_subset.obst
+
+
+def test_len(tdata):
+    tdata_subset = tdata[[0, 1, 4], :]
+    assert len(tdata_subset.obst) == 1

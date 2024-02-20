@@ -162,17 +162,24 @@ class TreeData(ad.AnnData):
             filemode=filemode,
         )
 
-        if label is not None:
-            for attr in ["obs", "var"]:
-                if label in getattr(self, attr).columns:
-                    warnings.warn(f"label {label} already present in .{attr} overwriting it", stacklevel=2)
-                    getattr(self, attr)[label] = pd.NA
-        self._tree_label = label
+        # init from TreeData
+        if isinstance(X, TreeData):
+            self._tree_label = X.label
+            self._allow_overlap = X.allow_overlap
+            self._obst = X.obst
+            self._vart = X.vart
 
-        self._allow_overlap = allow_overlap
-
-        self._obst = AxisTrees(self, 0, vals=obst)
-        self._vart = AxisTrees(self, 1, vals=vart)
+        # init from scratch
+        else:
+            if label is not None:
+                for attr in ["obs", "var"]:
+                    if label in getattr(self, attr).columns:
+                        warnings.warn(f"label {label} already present in .{attr} overwriting it", stacklevel=2)
+                        getattr(self, attr)[label] = pd.NA
+            self._tree_label = label
+            self._allow_overlap = allow_overlap
+            self._obst = AxisTrees(self, 0, vals=obst)
+            self._vart = AxisTrees(self, 1, vals=vart)
 
     def _init_as_view(self, tdata_ref: TreeData, oidx: Index, vidx: Index):
         super()._init_as_view(tdata_ref, oidx, vidx)

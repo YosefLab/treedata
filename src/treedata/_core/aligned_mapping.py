@@ -4,6 +4,7 @@ import warnings
 from collections import abc as cabc
 from collections import defaultdict
 from collections.abc import Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from functools import reduce
 from typing import (
     TYPE_CHECKING,
@@ -22,7 +23,8 @@ if TYPE_CHECKING:
     from anndata import AnnData
     from anndata.raw import Raw
 
-    from .treedata import TreeData
+    from treedata._core.treedata import TreeData
+
 
 OneDIdx = Union[Sequence[int], Sequence[bool], slice]
 TwoDIdx = tuple[OneDIdx, OneDIdx]
@@ -98,7 +100,7 @@ class AxisTreesBase(cabc.MutableMapping):
 
     @property
     def attrname(self) -> str:
-        return f"{self.dim}m"
+        return f"{self.dim}t"
 
     @property
     def axes(self) -> tuple[Literal[0, 1]]:
@@ -188,12 +190,14 @@ class AxisTreesView(AxisTreesBase):
         return subset_tree(self.parent_mapping[key], subset_leaves, asview=True)
 
     def __setitem__(self, key: str, value: nx.DiGraph):
-        value = self._validate_value(value, key)  # Validate before mutating
+        value, _ = self._validate_tree(value, key)  # Validate before mutating
         warnings.warn(
-            f"Setting element `.{self.attrname}['{key}']` of view, " "initializing view as actual.", stacklevel=2
+            f"Setting element `.{self.attrname}['{key}']` of view, initializing view as actual.", stacklevel=2
         )
         with view_update(self.parent, self.attrname, ()) as new_mapping:
             new_mapping[key] = value
+        print("here2")
+        print(key)
 
     def __delitem__(self, key: str):
         if key not in self:
@@ -201,7 +205,7 @@ class AxisTreesView(AxisTreesBase):
                 "'{key!r}' not found in view of {self.attrname}"
             )  # Make sure it exists before bothering with a copy
         warnings.warn(
-            f"Removing element `.{self.attrname}['{key}']` of view, " "initializing view as actual.", stacklevel=2
+            f"Removing element `.{self.attrname}['{key}']` of view, initializing view as actual.", stacklevel=2
         )
         with view_update(self.parent, self.attrname, ()) as new_mapping:
             del new_mapping[key]
@@ -216,6 +220,7 @@ class AxisTreesView(AxisTreesBase):
         return len(self.parent_mapping)
 
 
+@contextmanager
 def view_update(tdata_view: TreeData, attr_name: str, keys: tuple[str, ...]):
     """Context manager for updating a view of an AnnData object.
 
@@ -234,8 +239,10 @@ def view_update(tdata_view: TreeData, attr_name: str, keys: tuple[str, ...]):
     ------
     `adata.attr[key1][key2][keyn]...`
     """
-    new = TreeData.copy()
+    new = tdata_view.copy()
     attr = getattr(new, attr_name)
+    for key in attr:
+        print(key)
     container = reduce(lambda d, k: d[k], keys, attr)
     yield container
     tdata_view._init_as_actual(new)
