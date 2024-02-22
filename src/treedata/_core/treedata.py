@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Iterable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
@@ -171,11 +170,6 @@ class TreeData(ad.AnnData):
 
         # init from scratch
         else:
-            if label is not None:
-                for attr in ["obs", "var"]:
-                    if label in getattr(self, attr).columns:
-                        warnings.warn(f"label {label} already present in .{attr} overwriting it", stacklevel=2)
-                        getattr(self, attr)[label] = pd.NA
             self._tree_label = label
             self._allow_overlap = allow_overlap
             self._obst = AxisTrees(self, 0, vals=obst)
@@ -274,14 +268,6 @@ class TreeData(ad.AnnData):
     def copy(self) -> TreeData:
         """Full copy of the object."""
         adata = super().copy()
-
-        # remove label from obs and var
-        if self.label is not None:
-            if self.label in adata.obs.columns:
-                adata.obs.drop(columns=self.label, inplace=True)
-            if self.label in adata.var.columns:
-                adata.var.drop(columns=self.label, inplace=True)
-        # create a new TreeData object
         treedata_copy = TreeData(
             adata,
             obst=self.obst.copy(),
