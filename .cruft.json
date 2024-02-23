@@ -1,7 +1,7 @@
 {
   "template": "https://github.com/scverse/cookiecutter-scverse",
-  "commit": "eaf57d22e4e524debfeae4468eb770012d3b8cbb",
-  "checkout": null,
+  "commit": "586b1652162ff7994b0070a034023d64289ae416",
+  "checkout": "v0.3.1",
   "context": {
     "cookiecutter": {
       "project_name": "treedata",
