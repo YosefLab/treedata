@@ -72,7 +72,7 @@ class AxisTreesBase(cabc.MutableMapping):
                 new_leaves = leaves
             if new_leaves.intersection(self._leaf_to_tree.keys()):
                 raise ValueError(
-                    "Leaf names overlap with leaf names of other trees.", "Set `allow_overlap=True` to allow this"
+                    "Leaf names overlap with leaf names of other trees. Set `allow_overlap=True` to allow this."
                 )
         return tree, leaves
 
