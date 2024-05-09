@@ -15,11 +15,25 @@ The central class:
 
 ## Combining
 
-Combining TreeData objects. See also the section on concatenation.
+Combining TreeData objects.
 
 ```{eval-rst}
 .. autosummary::
    :toctree: generated/
 
    concat
+```
+
+## I/O
+
+Reading and writing TreeData objects.
+
+```{eval-rst}
+.. autosummary::
+   :toctree: generated/
+
+   read_h5ad
+   read_zarr
+   write_h5ad
+   write_zarr
 ```

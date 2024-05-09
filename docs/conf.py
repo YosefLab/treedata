@@ -130,6 +130,8 @@ html_theme_options = {
     "navigation_with_keys": False,
 }
 
+html_logo = "_static/img/treedata_schema.svg"
+
 pygments_style = "default"
 
 nitpick_ignore = [
