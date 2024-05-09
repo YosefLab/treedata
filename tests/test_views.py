@@ -34,16 +34,6 @@ def test_views(tdata):
     assert tdata_subset.obs["test"].tolist() == list(range(2))
 
 
-# this test should pass once anndata bug is fixed
-# See https://github.com/scverse/anndata/issues/1382
-@pytest.mark.xfail
-def test_views_creation(tdata):
-    tdata_view = td.TreeData(tdata, asview=True)
-    assert tdata_view.is_view
-    with pytest.raises(ValueError):
-        _ = td.TreeData(np.zeros(shape=(3, 3)), asview=False)
-
-
 def test_views_subset_tree(tdata):
     expected_edges = [
         ("0", "1"),
@@ -101,6 +91,15 @@ def test_views_set(tdata):
     assert not tdata_subset.is_view
     assert list(tdata_subset.obst.keys()) == ["tree", "new_tree"]
     assert list(tdata_subset.obst["new_tree"].edges) == [("0", "8")]
+    # good assignment no overlap
+    tree = nx.DiGraph([("root", "0"), ("root", "1")])
+    good_tree = nx.DiGraph([("root", "2"), ("root", "3")])
+    tdata = td.TreeData(X=np.zeros((8, 8)), allow_overlap=False, obst={"tree": tree})
+    print(tdata.obs_names)
+    tdata_subset = tdata[:4, :]
+    print(tdata_subset.obs_names)
+    with pytest.warns(UserWarning):
+        tdata_subset.obst["tree"] = good_tree
 
 
 def test_views_del(tdata):

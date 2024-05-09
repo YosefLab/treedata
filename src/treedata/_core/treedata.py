@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
+import warnings
+from collections.abc import Iterable, Mapping, MutableMapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -13,6 +14,8 @@ import numpy as np
 import pandas as pd
 from anndata._core.index import Index, Index1D
 from scipy import sparse
+
+from treedata._utils import digraph_to_dict
 
 from .aligned_mapping import (
     AxisTrees,
@@ -64,7 +67,7 @@ class TreeData(ad.AnnData):
     filemode
         Open mode of backing file. See :class:`h5py.File`.
     asview
-        Initialize as view. `X` has to be an AnnData object.
+        Initialize as view. `X` has to be an TreeData object.
     label
         Columns in `.obs` and `.var` to place tree key in. Default is "tree".
         If it's None, no column is added.
@@ -224,6 +227,11 @@ class TreeData(ad.AnnData):
         """Column in `.obs` and .`obs` with tree keys"""
         return self._tree_label
 
+    @property
+    def is_view(self) -> bool:
+        """`True` if object is view of another TreeData object, `False` otherwise."""
+        return self._is_view
+
     @obst.setter
     def obst(self, value):
         obst = AxisTrees(self, 0, vals=dict(value))
@@ -265,14 +273,122 @@ class TreeData(ad.AnnData):
         """Convert this TreeData object to an AnnData object."""
         return ad.AnnData(self)
 
-    def copy(self) -> TreeData:
-        """Full copy of the object."""
-        adata = super().copy()
-        treedata_copy = TreeData(
+    def _treedata_attrs(self) -> dict:
+        """Dictionary of TreeData attributes"""
+        return {
+            "obst": {k: digraph_to_dict(v) for k, v in self.obst.items()},
+            "vart": {k: digraph_to_dict(v) for k, v in self.vart.items()},
+            "label": self.label,
+            "allow_overlap": self.allow_overlap,
+        }
+
+    def copy(self, filename: PathLike | None = None) -> TreeData:
+        """Full copy, optionally on disk"""
+        adata = super().copy(filename=filename)
+        if not self.isbacked:
+            treedata_copy = TreeData(
+                adata,
+                obst=self.obst.copy(),
+                vart=self.vart.copy(),
+                label=self.label,
+                allow_overlap=self.allow_overlap,
+            )
+        else:
+            from .read import read_h5ad
+
+            if filename is None:
+                raise ValueError(
+                    "To copy an TreeData object in backed mode, "
+                    "pass a filename: `.copy(filename='myfilename.h5ad')`. "
+                    "To load the object into memory, use `.to_memory()`."
+                )
+            mode = self.file._filemode
+            adata.uns["treedata_attrs"] = self._treedata_attrs()
+            adata.write_h5ad(filename)
+            treedata_copy = read_h5ad(filename, backed=mode)
+        return treedata_copy
+
+    def transpose(self) -> TreeData:
+        """Transpose whole object
+
+        Data matrix is transposed, observations and variables are interchanged.
+        Ignores `.raw`.
+        """
+        adata = super().transpose()
+        treedata_transpose = TreeData(
+            adata,
+            obst=self.vart.copy(),
+            vart=self.obst.copy(),
+            label=self.label,
+            allow_overlap=self.allow_overlap,
+        )
+        return treedata_transpose
+
+    T = property(transpose)
+
+    def write_h5ad(
+        self,
+        filename: PathLike | None = None,
+        compression: Literal["gzip", "lzf"] | None = None,
+        compression_opts: int | Any = None,
+        as_dense: Sequence[str] = (),
+    ):
+        """Write `.h5ad`-formatted hdf5 file.
+
+        Parameters
+        ----------
+        filename
+            Filename of data file. Defaults to backing file.
+        compression
+            [`lzf`, `gzip`], see the h5py :ref:`dataset_compression`.
+        compression_opts
+            [`lzf`, `gzip`], see the h5py :ref:`dataset_compression`.
+        as_dense
+            Sparse arrays in TreeData object to write as dense. Currently only
+            supports `X` and `raw/X`.
+        """
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.uns["treedata_attrs"] = self._treedata_attrs()
+        super().write_h5ad(
+            filename=filename, compression=compression, compression_opts=compression_opts, as_dense=as_dense
+        )
+        self.uns.pop("treedata_attrs")
+
+    write = write_h5ad  # a shortcut and backwards compat
+
+    def write_zarr(
+        self,
+        store: MutableMapping | PathLike,
+        chunks: bool | int | tuple[int, ...] | None = None,
+    ):
+        """Write a hierarchical Zarr array store.
+
+        Parameters
+        ----------
+        store
+            The filename, a :class:`~typing.MutableMapping`, or a Zarr storage class.
+        chunks
+            Chunk shape.
+        """
+        adata = self.to_adata()
+        adata.uns["treedata_attrs"] = self._treedata_attrs()
+        adata.write_zarr(store=store, chunks=chunks)
+
+    def to_memory(self, copy=False) -> TreeData:
+        """Return a new AnnData object with all backed arrays loaded into memory.
+
+        Params
+        ------
+            copy:
+                Whether the arrays that are already in-memory should be copied.
+        """
+        adata = super().to_memory(copy)
+        tdata = TreeData(
             adata,
             obst=self.obst.copy(),
             vart=self.vart.copy(),
             label=self.label,
             allow_overlap=self.allow_overlap,
         )
-        return treedata_copy
+        return tdata
