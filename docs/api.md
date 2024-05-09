@@ -37,6 +37,7 @@ Reading TreeData objects.
 ```
 
 Writing TreeData objects.
+
 ```{eval-rst}
 .. autosummary::
    :toctree: generated/
@@ -44,4 +45,3 @@ Writing TreeData objects.
    TreeData.write_h5ad
    TreeData.write_zarr
 ```
-
