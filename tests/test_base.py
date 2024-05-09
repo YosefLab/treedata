@@ -181,3 +181,13 @@ def test_transpose(adata, tree):
     assert treedata.obst["tree"].nodes == treedata_transpose.vart["tree"].nodes
     assert treedata_transpose.obst_keys() == []
     assert np.array_equal(treedata.obs_names, treedata.T.obs_names)
+
+
+@pytest.mark.parametrize("dim", ["obs", "var"])
+def test_not_unique(X, tree, dim):
+    with pytest.warns(UserWarning):
+        tdata = td.TreeData(pd.DataFrame(X, index=["0", "1", "1"], columns=["0", "1", "1"]))
+    assert not getattr(tdata, f"{dim}_names").is_unique
+    with pytest.warns(UserWarning):
+        setattr(tdata, f"{dim}t", {"tree": tree})
+    assert getattr(tdata, f"{dim}_names").is_unique

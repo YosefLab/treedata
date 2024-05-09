@@ -86,6 +86,15 @@ class AxisTreesBase(cabc.MutableMapping):
                 mapping
             )
 
+    def _check_uniqueness(self):
+        names = "Observation" if self.dim == "obs" else "Variable"
+        if not getattr(self.parent, self.dim).index.is_unique:
+            warnings.warn(
+                f"{names} names must be unique to store a tree. Calling `.{self.dim}_names_make_unique` to make them unique.",
+                stacklevel=2,
+            )
+            getattr(self.parent, self.dim).index = ad.utils.make_index_unique(getattr(self.parent, self.dim).index)
+
     def copy(self):
         d = AxisTrees(self.parent, self._axis)
         for k, v in self.items():
@@ -122,7 +131,7 @@ class AxisTreesBase(cabc.MutableMapping):
 class AxisTrees(AxisTreesBase):
     def __init__(
         self,
-        parent: ad.AnnData,
+        parent: TreeData,
         axis: int,
         vals: Mapping | None = None,
     ):
@@ -141,6 +150,7 @@ class AxisTrees(AxisTreesBase):
         return nx.graphviews.generic_graph_view(self._data[key])
 
     def __setitem__(self, key: str, value: nx.DiGraph):
+        self._check_uniqueness()
         value, leaves = self._validate_tree(value, key)
 
         for leaf in leaves:
@@ -194,6 +204,7 @@ class AxisTreesView(AxisTreesBase):
         return subset_tree(self.parent_mapping[key], subset_leaves, asview=True)
 
     def __setitem__(self, key: str, value: nx.DiGraph):
+        self._check_uniqueness()
         value, _ = self._validate_tree(value, key)  # Validate before mutating
         warnings.warn(
             f"Setting element `.{self.attrname}['{key}']` of view, initializing view as actual.", stacklevel=2
