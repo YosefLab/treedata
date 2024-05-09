@@ -1,5 +1,3 @@
-# treedata
-
 [![Tests][badge-tests]][link-tests]
 [![Documentation][badge-docs]][link-docs]
 
@@ -12,7 +10,7 @@
   class="dark-light" align="right" width="350" alt="image"
 />
 
-## TreeData - AnnData with trees
+# TreeData - AnnData with trees
 
 TreeData is a lightweight wrapper around AnnData which adds two additional attributes, `obst` and `vart`, to store [nx.DiGraph] trees for observations and variables. TreeData has the same interface as AnnData and is fully compatible with [scverse] packages like [scanpy].
 
