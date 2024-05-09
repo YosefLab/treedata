@@ -208,7 +208,7 @@ class TreeData(ad.AnnData):
         return self._obst
 
     @property
-    def vart(self):
+    def vart(self) -> AxisTrees:
         """Tree annotation of variables
 
         Stores for each key a :class:`~networkx.DiGraph` with leaf nodes in
@@ -239,7 +239,7 @@ class TreeData(ad.AnnData):
 
     @vart.setter
     def vart(self, value):
-        vart = AxisTrees(self, 0, vals=dict(value))
+        vart = AxisTrees(self, 1, vals=dict(value))
         self._vart = vart
 
     def _gen_repr(self, n_obs, n_vars) -> str:
