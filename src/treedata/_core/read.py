@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import MutableMapping, Sequence
 from pathlib import Path
 from typing import (
@@ -32,7 +34,7 @@ def _tdata_from_adata(tdata) -> TreeData:
 
 
 def read_h5ad(
-    filename: str | Path,
+    filename: str | Path = None,
     backed: Literal["r", "r+"] | bool | None = None,
     *,
     as_sparse: Sequence[str] = (),
