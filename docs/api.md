@@ -34,6 +34,6 @@ Reading and writing TreeData objects.
 
    read_h5ad
    read_zarr
-   write_h5ad
-   write_zarr
+   TreeData.write_h5ad
+   TreeData.write_zarr
 ```
