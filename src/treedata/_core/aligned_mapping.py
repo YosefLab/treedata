@@ -185,6 +185,8 @@ class AxisTreesView(AxisTreesBase):
         self._dimnames = ("obs", "var")
         self.subset_idx = subset_idx
         self._axis = parent_mapping._axis
+        self._tree_to_leaf = parent_mapping._tree_to_leaf
+        self._leaf_to_tree = parent_mapping._leaf_to_tree
 
     def __getitem__(self, key: str) -> nx.DiGraph:
         leaves = self.parent_mapping._tree_to_leaf[key]

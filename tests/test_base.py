@@ -25,8 +25,7 @@ def tree():
 
 
 def check_graph_equality(g1, g2):
-    assert g1.nodes == g2.nodes
-    assert g1.edges == g2.edges
+    assert nx.is_isomorphic(g1, g2, node_match=lambda n1, n2: n1 == n2, edge_match=lambda e1, e2: e1 == e2)
 
 
 def test_creation(X, adata, tree):
@@ -173,3 +172,12 @@ def test_copy(adata, tree):
     assert np.array_equal(treedata.X, treedata_copy.X)
     assert treedata.obst["tree"].nodes == treedata_copy.obst["tree"].nodes
     assert treedata.obst["tree"].edges == treedata_copy.obst["tree"].edges
+
+
+def test_transpose(adata, tree):
+    treedata = td.TreeData(adata, obst={"tree": tree})
+    treedata_transpose = treedata.transpose()
+    assert np.array_equal(treedata.X.T, treedata_transpose.X)
+    assert treedata.obst["tree"].nodes == treedata_transpose.vart["tree"].nodes
+    assert treedata_transpose.obst_keys() == []
+    assert np.array_equal(treedata.obs_names, treedata.T.obs_names)

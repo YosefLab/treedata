@@ -24,8 +24,8 @@ dependencies = [
     "pandas",
     "pyarrow",
     "networkx",
-    # for debug logging (referenced from the issue template)
     "session-info",
+    "zarr",
 ]
 
 [project.optional-dependencies]
@@ -51,6 +51,7 @@ test = [
     "pytest",
     "coverage",
     "scanpy",
+    "joblib",
 ]
 
 [tool.coverage.run]

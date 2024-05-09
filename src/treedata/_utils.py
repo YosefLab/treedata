@@ -34,3 +34,28 @@ def combine_trees(subsets: list[nx.DiGraph]) -> nx.DiGraph:
 
     # The combined_tree now contains all nodes and edges from the subsets
     return combined_tree
+
+
+def digraph_to_dict(G: nx.DiGraph) -> dict:
+    """Convert a networkx.DiGraph to a dictionary."""
+    G = nx.DiGraph(G)
+    edge_dict = nx.to_dict_of_dicts(G)
+    # Get node data
+    node_dict = {node: G.nodes[node] for node in G.nodes()}
+    # Combine edge and node data in one dictionary
+    graph_dict = {"edges": edge_dict, "nodes": node_dict}
+
+    return graph_dict
+
+
+def dict_to_digraph(graph_dict: dict) -> nx.DiGraph:
+    """Convert a dictionary to a networkx.DiGraph."""
+    G = nx.DiGraph()
+    # Add nodes and their attributes
+    for node, attrs in graph_dict["nodes"].items():
+        G.add_node(node, **attrs)
+    # Add edges and their attributes
+    for source, targets in graph_dict["edges"].items():
+        for target, attrs in targets.items():
+            G.add_edge(source, target, **attrs)
+    return G
