@@ -26,7 +26,7 @@ Combining TreeData objects.
 
 ## I/O
 
-Reading and writing TreeData objects.
+Reading TreeData objects.
 
 ```{eval-rst}
 .. autosummary::
@@ -34,6 +34,14 @@ Reading and writing TreeData objects.
 
    read_h5ad
    read_zarr
+```
+
+Writing TreeData objects.
+```{eval-rst}
+.. autosummary::
+   :toctree: generated/
+
    TreeData.write_h5ad
    TreeData.write_zarr
 ```
+
