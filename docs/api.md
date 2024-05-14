@@ -15,7 +15,7 @@ The central class:
 
 ## Combining
 
-Combining TreeData objects.
+Combining TreeData objects:
 
 ```{eval-rst}
 .. autosummary::
@@ -24,9 +24,9 @@ Combining TreeData objects.
    concat
 ```
 
-## I/O
+## Read
 
-Reading TreeData objects.
+Reading TreeData objects:
 
 ```{eval-rst}
 .. autosummary::
@@ -36,7 +36,9 @@ Reading TreeData objects.
    read_zarr
 ```
 
-Writing TreeData objects.
+## Write
+
+Writing TreeData objects:
 
 ```{eval-rst}
 .. autosummary::
