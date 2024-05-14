@@ -2,7 +2,7 @@
 [![Documentation][badge-docs]][link-docs]
 [![PyPI](https://img.shields.io/pypi/v/treedata.svg)](https://pypi.org/project/treedata)
 
-[badge-tests]: https://img.shields.io/github/actions/workflow/status/colganwi/treedata/test.yaml?branch=main
+[badge-tests]: https://img.shields.io/github/actions/workflow/status/YosefLab/treedata/test.yaml?branch=main
 [link-tests]: https://github.com/YosefLab/treedata/actions/workflows/test.yaml
 [badge-docs]: https://img.shields.io/readthedocs/treedata
 
