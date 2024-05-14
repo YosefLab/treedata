@@ -23,15 +23,13 @@ Python installed, we recommend installing [Mambaforge](https://github.com/conda-
 
 There are several alternative options to install treedata:
 
-<!--
 1) Install the latest release of `treedata` from `PyPI <https://pypi.org/project/treedata/>`_:
 
 ```bash
 pip install treedata
 ```
--->
 
-1. Install the latest development version:
+2. Install the latest development version:
 
 ```bash
 pip install git+https://github.com/YosefLab/treedata.git@main
