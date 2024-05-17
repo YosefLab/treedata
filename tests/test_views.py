@@ -59,6 +59,22 @@ def test_views_subset_tree(tdata):
     assert len(tdata.obst["tree"].edges) == 14
 
 
+def test_views_subset_trees():
+    # subset tdata with multiple trees
+    tree1 = nx.DiGraph([("root", "0"), ("root", "1")])
+    tree2 = nx.DiGraph([("root", "2"), ("root", "3")])
+    tdata = td.TreeData(X=np.zeros((8, 8)), allow_overlap=False, obst={"tree1": tree1, "tree2": tree2})
+    tdata_subset = tdata[["0", "1"], :]
+    assert list(tdata_subset.obst["tree1"].edges) == [("root", "0"), ("root", "1")]
+    assert list(tdata_subset.obst["tree2"].edges) == []
+    tdata_subset = tdata[["2", "3"], :]
+    assert list(tdata_subset.obst["tree1"].edges) == []
+    assert list(tdata_subset.obst["tree2"].edges) == [("root", "2"), ("root", "3")]
+    tdata_subset = tdata[["0", "1", "2"], :]
+    assert list(tdata_subset.obst["tree1"].edges) == [("root", "0"), ("root", "1")]
+    assert list(tdata_subset.obst["tree2"].edges) == [("root", "2")]
+
+
 def test_views_mutability(tdata):
     # can mutate attributes of graph
     nx.set_node_attributes(tdata.obst["tree"], False, "in_subset")

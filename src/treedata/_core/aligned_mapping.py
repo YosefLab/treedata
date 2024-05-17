@@ -45,6 +45,9 @@ class AxisTreesBase(cabc.MutableMapping):
         # Check value type
         if not isinstance(tree, nx.DiGraph):
             raise ValueError(f"Value for key {key} must be a nx.DiGraph")
+        # Empty tree
+        if tree.number_of_nodes() == 0:
+            return tree, set()
         # Check tree
         if tree.number_of_nodes() != tree.number_of_edges() + 1:
             raise ValueError(f"Value for key {key} must be a tree")
