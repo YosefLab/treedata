@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from treedata._core.treedata import TreeData
 
 
-OneDIdx = Union[Sequence[int], Sequence[bool], slice]
+OneDIdx = Sequence[int] | Sequence[bool] | slice
 TwoDIdx = tuple[OneDIdx, OneDIdx]
 
 I = TypeVar("I", OneDIdx, TwoDIdx, covariant=True)
