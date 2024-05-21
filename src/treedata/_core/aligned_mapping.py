@@ -10,7 +10,6 @@ from typing import (
     TYPE_CHECKING,
     Literal,
     TypeVar,
-    Union,
 )
 
 import anndata as ad
@@ -26,7 +25,7 @@ if TYPE_CHECKING:
     from treedata._core.treedata import TreeData
 
 
-OneDIdx = Union[Sequence[int], Sequence[bool], slice]
+OneDIdx = Sequence[int] | Sequence[bool] | slice
 TwoDIdx = tuple[OneDIdx, OneDIdx]
 
 I = TypeVar("I", OneDIdx, TwoDIdx, covariant=True)
