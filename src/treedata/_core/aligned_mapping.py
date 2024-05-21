@@ -10,7 +10,6 @@ from typing import (
     TYPE_CHECKING,
     Literal,
     TypeVar,
-    Union,
 )
 
 import anndata as ad
