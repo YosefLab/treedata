@@ -20,8 +20,11 @@ urls.Source = "https://github.com/YosefLab/treedata"
 urls.Home-page = "https://github.com/YosefLab/treedata"
 dependencies = [
     "anndata",
+    "copy",
+    "h5py",
     "numpy",
     "pandas",
+    "pathlib",
     "pyarrow",
     "networkx",
     "session-info",

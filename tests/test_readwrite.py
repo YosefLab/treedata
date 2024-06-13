@@ -75,7 +75,7 @@ def test_read_anndata(tdata, tmp_path):
 def test_h5ad_backing(tdata, tree, tmp_path):
     tdata_copy = tdata.copy()
     assert not tdata.isbacked
-    backing_h5ad = tmp_path / "test.h5ad"
+    backing_h5ad = tmp_path / "test_backed.h5ad"
     tdata.filename = backing_h5ad
     # backing mode
     tdata.write()
@@ -93,13 +93,10 @@ def test_h5ad_backing(tdata, tree, tmp_path):
     with pytest.warns(UserWarning):
         with pytest.raises(ValueError):
             tdata_subset.obs["foo"] = range(3)
-    # with pytest.warns(UserWarning):
-    #    with pytest.raises(ValueError):
-    #       tdata_subset.obst["foo"] = tree
     assert subset_hash == joblib.hash(tdata_subset)
     assert tdata_subset.is_view
     # copy
-    tdata_subset = tdata_subset.copy(tmp_path / "test.subset.h5ad")
+    tdata_subset = tdata_subset.copy(tmp_path / "test_subset.h5ad")
     assert not tdata_subset.is_view
     tdata_subset.obs["foo"] = range(3)
     assert not tdata_subset.is_view
@@ -110,4 +107,9 @@ def test_h5ad_backing(tdata, tree, tmp_path):
     tdata_subset = tdata_subset.to_memory()
     assert not tdata_subset.is_view
     assert not tdata_subset.isbacked
+    print(tdata_subset)
     check_graph_equality(tdata_subset.obst["tree"], tdata.obst["tree"])
+
+
+if __name__ == "__main__":
+    pytest.main(["-v", __file__])
