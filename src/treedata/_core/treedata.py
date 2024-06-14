@@ -330,7 +330,7 @@ class TreeData(ad.AnnData):
 
             if filename is None:
                 raise ValueError(
-                    "To copy an AnnData object in backed mode, "
+                    "To copy an TreeData object in backed mode, "
                     "pass a filename: `.copy(filename='myfilename.h5ad')`. "
                     "To load the object into memory, use `.to_memory()`."
                 )

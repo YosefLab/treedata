@@ -83,7 +83,7 @@ def test_tree_label(X, tree, dim):
     assert getattr(tdata, dim)["tree"].tolist() == ["0", "0", "1"]
     # Test tree label with overlap
     tdata = td.TreeData(X, obst={"0": tree, "1": tree}, label="tree", vart={"0": tree, "1": tree}, allow_overlap=True)
-    assert getattr(tdata, dim)["tree"].tolist() == [["0", "1"], ["0", "1"], []]
+    assert getattr(tdata, dim).loc["0", "tree"] == "0,1"
     # Test label already present warning
     df = pd.DataFrame({"tree": ["bad", "bad", "bad"]})
     with pytest.warns(UserWarning):

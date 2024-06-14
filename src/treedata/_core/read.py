@@ -76,7 +76,9 @@ def read_h5ad(
             treedata_attrs = json.loads(f["raw.treedata_attrs"][()])
         else:
             treedata_attrs = None
-    return _tdata_from_adata(adata, treedata_attrs)
+    tdata = _tdata_from_adata(adata, treedata_attrs)
+
+    return tdata
 
 
 def read_zarr(store: str | Path | MutableMapping | zarr.Group) -> TreeData:
