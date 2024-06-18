@@ -18,6 +18,7 @@ def tree():
     tree.add_edges_from([("root", "0"), ("root", "1")])
     tree["root"]["0"]["length"] = 1
     tree.nodes["root"]["depth"] = 0
+    tree.nodes["root"]["characters"] = ["-1", "1"]
     yield tree
 
 
@@ -30,30 +31,23 @@ def check_graph_equality(g1, g2):
     assert nx.is_isomorphic(g1, g2, node_match=lambda n1, n2: n1 == n2, edge_match=lambda e1, e2: e1 == e2)
 
 
-def test_h5ad_readwrite(tdata, tmp_path):
-    # not backed
+@pytest.mark.parametrize("backed", [None, "r"])
+def test_h5ad_readwrite(tdata, tmp_path, backed):
     file_path = tmp_path / "test.h5ad"
     tdata.write_h5ad(file_path)
-    tdata2 = td.read_h5ad(file_path)
+    tdata2 = td.read_h5ad(file_path, backed=backed)
     assert np.array_equal(tdata2.X, tdata.X)
     check_graph_equality(tdata2.obst["1"], tdata.obst["1"])
     check_graph_equality(tdata2.vart["1"], tdata.vart["1"])
     assert tdata2.label == "tree"
     assert tdata2.allow_overlap is True
-    assert tdata2.obst["2"].nodes["root"]["depth"] == 0
+    assert tdata2.obst["1"].nodes["root"]["depth"] == 0
+    assert tdata2.obst["2"].nodes["root"]["characters"] == ["-1", "1"]
     assert tdata2.obs.loc["0", "tree"] == "1,2"
-    # backed
-    tdata2 = td.read_h5ad(file_path, backed="r")
-    assert np.array_equal(tdata2.X, tdata.X)
-    check_graph_equality(tdata2.obst["1"], tdata.obst["1"])
-    check_graph_equality(tdata2.vart["1"], tdata.vart["1"])
-    assert tdata2.label == "tree"
-    assert tdata2.allow_overlap is True
-    assert tdata2.obst["2"].nodes["root"]["depth"] == 0
-    assert tdata2.obs.loc["0", "tree"] == "1,2"
-    assert tdata2.isbacked
-    assert tdata2.file.is_open
-    assert tdata2.filename == file_path
+    if backed:
+        assert tdata2.isbacked
+        assert tdata2.file.is_open
+        assert tdata2.filename == file_path
 
 
 def test_zarr_readwrite(tdata, tmp_path):

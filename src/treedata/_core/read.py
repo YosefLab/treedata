@@ -72,8 +72,8 @@ def read_h5ad(
         chunk_size=chunk_size,
     )
     with h5py.File(filename, "r") as f:
-        if "raw.treedata_attrs" in f:
-            treedata_attrs = json.loads(f["raw.treedata_attrs"][()])
+        if "raw.treedata" in f:
+            treedata_attrs = json.loads(f["raw.treedata"][()])
         else:
             treedata_attrs = None
     tdata = _tdata_from_adata(adata, treedata_attrs)
@@ -90,7 +90,12 @@ def read_zarr(store: str | Path | MutableMapping | zarr.Group) -> TreeData:
         The filename, a :class:`~typing.MutableMapping`, or a Zarr storage class.
     """
     adata = ad.read_zarr(store)
-    if "treedata_attrs" in adata.uns.keys():
-        treedata_attrs = adata.uns["treedata_attrs"]
-        del adata.uns["treedata_attrs"]
-    return _tdata_from_adata(adata, treedata_attrs)
+
+    with zarr.open(store, mode="r") as f:
+        if "raw.treedata" in f:
+            treedata_attrs = json.loads(f["raw.treedata"][()])
+        else:
+            treedata_attrs = None
+    tdata = _tdata_from_adata(adata, treedata_attrs)
+
+    return tdata

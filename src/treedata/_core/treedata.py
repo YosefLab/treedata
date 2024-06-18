@@ -15,8 +15,9 @@ import h5py
 import networkx as nx
 import numpy as np
 import pandas as pd
+import zarr
 from anndata._core.index import Index, Index1D, _subset
-from anndata._io.h5ad import write_h5ad
+from anndata._io import write_h5ad, write_zarr
 from scipy import sparse
 
 from treedata._utils import digraph_to_dict
@@ -391,9 +392,9 @@ class TreeData(ad.AnnData):
         )
 
         with h5py.File(filename, "a") as f:
-            if "raw.treedata_attrs" in f:
-                del f["raw.treedata_attrs"]
-            f.create_dataset("raw.treedata_attrs", data=json.dumps(self._treedata_attrs()))
+            if "raw.treedata" in f:
+                del f["raw.treedata"]
+            f.create_dataset("raw.treedata", data=json.dumps(self._treedata_attrs()))
 
     write = write_h5ad  # a shortcut and backwards compat
 
@@ -411,9 +412,12 @@ class TreeData(ad.AnnData):
         chunks
             Chunk shape.
         """
-        adata = self.to_adata()
-        adata.uns["treedata_attrs"] = self._treedata_attrs()
-        adata.write_zarr(store=store, chunks=chunks)
+        write_zarr(store, self.to_adata(), chunks=chunks)
+
+        with zarr.open(store, mode="a") as f:
+            if "treedata" in f:
+                del f["raw.treedata"]
+            f.create_dataset("raw.treedata", data=json.dumps(self._treedata_attrs()))
 
     def to_memory(self, copy=False) -> TreeData:
         """Return a new AnnData object with all backed arrays loaded into memory.
