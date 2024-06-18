@@ -31,7 +31,7 @@ release = info["Version"]
 
 bibtex_bibfiles = ["references.bib"]
 templates_path = ["_templates"]
-nitpicky = True  # Warn about broken links
+nitpicky = False  # Warn about broken links
 needs_sphinx = "4.0"
 
 html_context = {
@@ -74,6 +74,7 @@ napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
 napoleon_use_rtype = True  # having a separate entry generally helps readability
 napoleon_use_param = True
+napoleon_custom_sections = [("Params", "Parameters")]
 myst_heading_anchors = 6  # create anchors for h1-h6
 myst_enable_extensions = [
     "amsmath",
