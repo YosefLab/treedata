@@ -35,8 +35,8 @@ def concat(
 ) -> TreeData:
     """Concatenates TreeData objects along an axis.
 
-    Params
-    ------
+    Parameters
+    ----------
     tdatas
         The objects to be concatenated. If a Mapping is passed, keys are used for the `keys`
         argument and values are concatenated.

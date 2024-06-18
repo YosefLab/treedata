@@ -53,7 +53,7 @@ For questions and bug reports please use the [issue tracker][issue-tracker].
 [nx.DiGraph]: https://networkx.org/documentation/stable/reference/classes/digraph.html
 [scverse-discourse]: https://discourse.scverse.org/
 [issue-tracker]: https://github.com/YosefLab/treedata/issues
-[changelog]: https://treedata.readthedocs.io/latest/changelog.html
+[changelog]: https://treedata.readthedocs.io/en/latest/changelog.html
 [link-docs]: https://treedata.readthedocs.io
 [link-getting-started]: https://treedata.readthedocs.io/en/latest/notebooks/getting-started.html
 [link-api]: https://treedata.readthedocs.io/latest/api.html

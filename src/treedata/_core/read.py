@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import MutableMapping, Sequence
 from pathlib import Path
 from typing import (
@@ -7,6 +8,7 @@ from typing import (
 )
 
 import anndata as ad
+import h5py
 import zarr
 from scipy import sparse
 
@@ -15,16 +17,14 @@ from treedata._core.treedata import TreeData
 from treedata._utils import dict_to_digraph
 
 
-def _tdata_from_adata(tdata) -> TreeData:
+def _tdata_from_adata(tdata, treedata_attrs=None) -> TreeData:
     """Create a TreeData object parsing attribute from AnnData uns field."""
     tdata.__class__ = TreeData
-    if "treedata_attrs" in tdata.uns.keys():
-        treedata_attrs = tdata.uns["treedata_attrs"]
+    if treedata_attrs is not None:
         tdata._tree_label = treedata_attrs["label"] if "label" in treedata_attrs.keys() else None
         tdata._allow_overlap = bool(treedata_attrs["allow_overlap"])
         tdata._obst = AxisTrees(tdata, 0, vals={k: dict_to_digraph(v) for k, v in treedata_attrs["obst"].items()})
         tdata._vart = AxisTrees(tdata, 1, vals={k: dict_to_digraph(v) for k, v in treedata_attrs["vart"].items()})
-        del tdata.uns["treedata_attrs"]
     else:
         tdata._tree_label = None
         tdata._allow_overlap = False
@@ -71,7 +71,14 @@ def read_h5ad(
         as_sparse_fmt=as_sparse_fmt,
         chunk_size=chunk_size,
     )
-    return _tdata_from_adata(adata)
+    with h5py.File(filename, "r") as f:
+        if "raw.treedata" in f:
+            treedata_attrs = json.loads(f["raw.treedata"][()])
+        else:
+            treedata_attrs = None
+    tdata = _tdata_from_adata(adata, treedata_attrs)
+
+    return tdata
 
 
 def read_zarr(store: str | Path | MutableMapping | zarr.Group) -> TreeData:
@@ -83,4 +90,12 @@ def read_zarr(store: str | Path | MutableMapping | zarr.Group) -> TreeData:
         The filename, a :class:`~typing.MutableMapping`, or a Zarr storage class.
     """
     adata = ad.read_zarr(store)
-    return _tdata_from_adata(adata)
+
+    with zarr.open(store, mode="r") as f:
+        if "raw.treedata" in f:
+            treedata_attrs = json.loads(f["raw.treedata"][()])
+        else:
+            treedata_attrs = None
+    tdata = _tdata_from_adata(adata, treedata_attrs)
+
+    return tdata

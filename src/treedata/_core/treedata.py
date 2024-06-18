@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-import warnings
+import json
 from collections.abc import Iterable, Mapping, MutableMapping, Sequence
+from copy import deepcopy
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -9,10 +11,13 @@ from typing import (
 )
 
 import anndata as ad
+import h5py
 import networkx as nx
 import numpy as np
 import pandas as pd
-from anndata._core.index import Index, Index1D
+import zarr
+from anndata._core.index import Index, Index1D, _subset
+from anndata._io import write_h5ad, write_zarr
 from scipy import sparse
 
 from treedata._utils import digraph_to_dict
@@ -282,17 +287,45 @@ class TreeData(ad.AnnData):
             "allow_overlap": self.allow_overlap,
         }
 
+    def _mutated_copy(self, **kwargs):
+        """Creating TreeData with attributes optionally specified via kwargs."""
+        if self.isbacked:
+            if "X" not in kwargs or (self.raw is not None and "raw" not in kwargs):
+                raise NotImplementedError(
+                    "This function does not currently handle backed objects "
+                    "internally, this should be dealt with before."
+                )
+        new = {}
+        new["label"] = self.label
+        new["allow_overlap"] = self.allow_overlap
+
+        for key in ["obs", "var", "obsm", "varm", "obsp", "varp", "obst", "vart", "layers"]:
+            if key in kwargs:
+                new[key] = kwargs[key]
+            else:
+                new[key] = getattr(self, key).copy()
+        if "X" in kwargs:
+            new["X"] = kwargs["X"]
+        elif self._has_X():
+            new["X"] = self.X.copy()
+        if "uns" in kwargs:
+            new["uns"] = kwargs["uns"]
+        else:
+            new["uns"] = deepcopy(self._uns)
+        if "raw" in kwargs:
+            new["raw"] = kwargs["raw"]
+        elif self.raw is not None:
+            new["raw"] = self.raw.copy()
+
+        return TreeData(**new)
+
     def copy(self, filename: PathLike | None = None) -> TreeData:
-        """Full copy, optionally on disk"""
-        adata = super().copy(filename=filename)
+        """Full copy, optionally on disk."""
         if not self.isbacked:
-            treedata_copy = TreeData(
-                adata,
-                obst=self.obst.copy(),
-                vart=self.vart.copy(),
-                label=self.label,
-                allow_overlap=self.allow_overlap,
-            )
+            if self.is_view and self._has_X():
+                return self._mutated_copy(X=_subset(self._adata_ref.X, (self._oidx, self._vidx)).copy())
+            else:
+                return self._mutated_copy()
         else:
             from .read import read_h5ad
 
@@ -303,10 +336,8 @@ class TreeData(ad.AnnData):
                     "To load the object into memory, use `.to_memory()`."
                 )
             mode = self.file._filemode
-            adata.uns["treedata_attrs"] = self._treedata_attrs()
-            adata.write_h5ad(filename)
-            treedata_copy = read_h5ad(filename, backed=mode)
-        return treedata_copy
+            self.write_h5ad(filename)
+            return read_h5ad(filename, backed=mode)
 
     def transpose(self) -> TreeData:
         """Transpose whole object
@@ -347,13 +378,23 @@ class TreeData(ad.AnnData):
             Sparse arrays in TreeData object to write as dense. Currently only
             supports `X` and `raw/X`.
         """
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            self.uns["treedata_attrs"] = self._treedata_attrs()
-        super().write_h5ad(
-            filename=filename, compression=compression, compression_opts=compression_opts, as_dense=as_dense
+        if filename is None and not self.isbacked:
+            raise ValueError("Provide a filename!")
+        if filename is None:
+            filename = self.filename
+
+        write_h5ad(
+            Path(filename),
+            self,
+            compression=compression,
+            compression_opts=compression_opts,
+            as_dense=as_dense,
         )
-        self.uns.pop("treedata_attrs")
+
+        with h5py.File(filename, "a") as f:
+            if "raw.treedata" in f:
+                del f["raw.treedata"]
+            f.create_dataset("raw.treedata", data=json.dumps(self._treedata_attrs()))
 
     write = write_h5ad  # a shortcut and backwards compat
 
@@ -371,9 +412,12 @@ class TreeData(ad.AnnData):
         chunks
             Chunk shape.
         """
-        adata = self.to_adata()
-        adata.uns["treedata_attrs"] = self._treedata_attrs()
-        adata.write_zarr(store=store, chunks=chunks)
+        write_zarr(store, self.to_adata(), chunks=chunks)
+
+        with zarr.open(store, mode="a") as f:
+            if "treedata" in f:
+                del f["raw.treedata"]
+            f.create_dataset("raw.treedata", data=json.dumps(self._treedata_attrs()))
 
     def to_memory(self, copy=False) -> TreeData:
         """Return a new AnnData object with all backed arrays loaded into memory.
