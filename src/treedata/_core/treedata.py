@@ -20,7 +20,7 @@ from anndata._core.index import Index, Index1D, _subset
 from anndata._io import write_h5ad, write_zarr
 from scipy import sparse
 
-from treedata._utils import digraph_to_dict
+from treedata._utils import digraph_to_dict, make_serializable
 
 from .aligned_mapping import (
     AxisTrees,
@@ -280,12 +280,13 @@ class TreeData(ad.AnnData):
 
     def _treedata_attrs(self) -> dict:
         """Dictionary of TreeData attributes"""
-        return {
+        attrs = {
             "obst": {k: digraph_to_dict(v) for k, v in self.obst.items()},
             "vart": {k: digraph_to_dict(v) for k, v in self.vart.items()},
             "label": self.label,
             "allow_overlap": self.allow_overlap,
         }
+        return make_serializable(attrs)
 
     def _mutated_copy(self, **kwargs):
         """Creating TreeData with attributes optionally specified via kwargs."""
