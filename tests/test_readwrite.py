@@ -2,6 +2,7 @@ import anndata as ad
 import joblib
 import networkx as nx
 import numpy as np
+import pandas as pd
 import pytest
 
 import treedata as td
@@ -48,6 +49,30 @@ def test_h5ad_readwrite(tdata, tmp_path, backed):
         assert tdata2.isbacked
         assert tdata2.file.is_open
         assert tdata2.filename == file_path
+
+
+def test_h5ad_dtypes(tdata, tmp_path):
+    file_path = tmp_path / "test.h5ad"
+    tdata.obst["1"].nodes["root"]["list"] = [1, 2, 3]
+    tdata.obst["1"].nodes["root"]["tuple"] = (1, 2, 3)
+    tdata.obst["1"].nodes["root"]["set"] = {1, 2, 3}
+    tdata.obst["1"].nodes["root"]["np_float"] = np.float64(1.0)
+    tdata.obst["1"].nodes["root"]["np_array"] = np.array([[1, 2], [3, 4]])
+    tdata.obst["1"].nodes["root"]["pd_series"] = pd.Series(["1", "2", "3"])
+    tdata.write_h5ad(file_path)
+    tdata2 = td.read_h5ad(file_path)
+    assert tdata2.obst["1"].nodes["root"]["list"] == [1, 2, 3]
+    assert isinstance(tdata2.obst["1"].nodes["root"]["list"], list)
+    assert tdata2.obst["1"].nodes["root"]["tuple"] == [1, 2, 3]
+    assert isinstance(tdata2.obst["1"].nodes["root"]["tuple"], list)
+    assert tdata2.obst["1"].nodes["root"]["set"] == [1, 2, 3]
+    assert isinstance(tdata2.obst["1"].nodes["root"]["set"], list)
+    assert tdata2.obst["1"].nodes["root"]["np_float"] == 1.0
+    assert isinstance(tdata2.obst["1"].nodes["root"]["np_float"], float)
+    assert tdata2.obst["1"].nodes["root"]["np_array"] == [[1, 2], [3, 4]]
+    assert isinstance(tdata2.obst["1"].nodes["root"]["np_array"], list)
+    assert tdata2.obst["1"].nodes["root"]["pd_series"] == ["1", "2", "3"]
+    assert isinstance(tdata2.obst["1"].nodes["root"]["pd_series"], list)
 
 
 def test_zarr_readwrite(tdata, tmp_path):

@@ -1,6 +1,8 @@
 from collections import deque
 
 import networkx as nx
+import numpy as np
+import pandas as pd
 
 
 def subset_tree(tree: nx.DiGraph, leaves: list[str], asview: bool) -> nx.DiGraph:
@@ -59,3 +61,19 @@ def dict_to_digraph(graph_dict: dict) -> nx.DiGraph:
         for target, attrs in targets.items():
             G.add_edge(source, target, **attrs)
     return G
+
+
+def make_serializable(data: dict) -> dict:
+    """Make a graph dictionary serializable."""
+    if isinstance(data, dict):
+        return {k: make_serializable(v) for k, v in data.items()}
+    elif isinstance(data, list | tuple | set):
+        return [make_serializable(v) for v in data]
+    elif isinstance(data, np.ndarray):
+        return data.tolist()
+    elif isinstance(data, np.generic | np.number):
+        return data.item()
+    elif isinstance(data, pd.Series):
+        return data.tolist()
+    else:
+        return data
