@@ -83,7 +83,7 @@ class AxisTreesBase(cabc.MutableMapping):
             if self.parent.allow_overlap:
                 mapping = {k: ",".join(map(str, v)) for k, v in self._leaf_to_tree.items()}
             else:
-                mapping = {k: v[0] for k, v in self._leaf_to_tree.items()}
+                mapping = {k: next(iter(v)) for k, v in self._leaf_to_tree.items()}
             getattr(self.parent, self.dim)[self.parent._tree_label] = getattr(self.parent, f"{self.dim}_names").map(
                 mapping
             )
@@ -144,7 +144,7 @@ class AxisTrees(AxisTreesBase):
         self._axis = axis
         self._data = {}
         self._tree_to_leaf = defaultdict(set)
-        self._leaf_to_tree = defaultdict(list)
+        self._leaf_to_tree = defaultdict(set)
         if vals is not None:
             self.update(vals)
 
@@ -156,7 +156,7 @@ class AxisTrees(AxisTreesBase):
         value, leaves = self._validate_tree(value, key)
 
         for leaf in leaves:
-            self._leaf_to_tree[leaf].append(key)
+            self._leaf_to_tree[leaf].add(key)
         self._tree_to_leaf[key] = leaves
 
         if not self.parent.is_view:

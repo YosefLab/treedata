@@ -88,6 +88,10 @@ def test_tree_label(X, tree, dim):
     df = pd.DataFrame({"tree": ["bad", "bad", "bad"]})
     with pytest.warns(UserWarning):
         tdata = td.TreeData(X, label="tree", obs=df, var=df)
+    # Test tree label with updata
+    tdata = td.TreeData(X, obst={"0": tree, "1": tree}, label="tree", vart={"0": tree, "1": tree}, allow_overlap=True)
+    tdata.obst["0"] = tree
+    assert getattr(tdata, dim).loc["0", "tree"] == "0,1"
 
 
 def test_tree_overlap(X, tree):

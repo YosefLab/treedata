@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning][].
 
 ### Added
 
+### Changed
+
+-   `obst` and `vart` create local copy of `nx.DiGraphs` that are added (#26)
+
+### Fixed
+
+-   Fixed bug which caused key to be listed twice in `tree_label` column after value update in `obst` or `vart` (#26)
+
 ## [0.0.2] - 2024-06-18
 
 ### Changed
