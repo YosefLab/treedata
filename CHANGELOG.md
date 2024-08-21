@@ -14,8 +14,18 @@ and this project adheres to [Semantic Versioning][].
 
 ### Changed
 
+### Fixed
+
+## [0.0.3] - 2024-08-21
+
+### Added
+
+-   Add concatenation tutorial to documentation (#27)
+
+### Changed
+
 -   `obst` and `vart` create local copy of `nx.DiGraphs` that are added (#26)
--   `TreeData.label` value remains the same after `td.concat` as long as all `label` values are the same (#27)
+-   `TreeData.label` value remains the same after `td.concat` as long as all `label` values are the same for all objects (#27)
 
 ### Fixed
 

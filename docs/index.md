@@ -9,6 +9,9 @@
 notebooks/getting-started
 
 api.md
+
+notebooks/concatenation
+
 changelog.md
 contributing.md
 references.md
