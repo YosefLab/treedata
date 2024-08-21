@@ -81,7 +81,7 @@ class AxisTreesBase(cabc.MutableMapping):
     def _update_tree_labels(self):
         if self.parent._tree_label is not None:
             if self.parent.allow_overlap:
-                mapping = {k: ",".join(map(str, v)) for k, v in self._leaf_to_tree.items()}
+                mapping = {k: ",".join(map(str, sorted(v))) for k, v in self._leaf_to_tree.items()}
             else:
                 mapping = {k: next(iter(v)) for k, v in self._leaf_to_tree.items()}
             getattr(self.parent, self.dim)[self.parent._tree_label] = getattr(self.parent, f"{self.dim}_names").map(
