@@ -162,7 +162,7 @@ class AxisTrees(AxisTreesBase):
         if not self.parent.is_view:
             self._update_tree_labels()
 
-        self._data[key] = value
+        self._data[key] = value.copy()
 
     def __delitem__(self, key: str):
         for leaf in self._tree_to_leaf[key]:
