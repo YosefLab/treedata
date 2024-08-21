@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typing
+import warnings
 from collections.abc import (
     Callable,
     Collection,
@@ -100,7 +101,16 @@ def concat(
         fill_value=fill_value,
         pairwise=pairwise,
     )
-    tdata = TreeData(adata, allow_overlap=True)
+
+    # Create new TreeData object
+    label = {t.label for t in tdatas if t.label is not None}
+    if len(label) > 1:
+        warnings.warn("Multiple label values found. Setting to `tree`.", stacklevel=2)
+        label = "tree"
+    else:
+        label = next(iter(label), None)
+    allow_overlap = any(t.allow_overlap for t in tdatas)
+    tdata = TreeData(adata, allow_overlap=allow_overlap, label=label)
 
     # Trees for concatenation axis
     concat_trees = [getattr(t, f"{dim}t") for t in tdatas]
