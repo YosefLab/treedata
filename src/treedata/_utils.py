@@ -63,7 +63,7 @@ def dict_to_digraph(graph_dict: dict) -> nx.DiGraph:
     return G
 
 
-def make_serializable(data: dict) -> dict:
+def make_serializable(data) -> dict:
     """Make a graph dictionary serializable."""
     if isinstance(data, dict):
         return {k: make_serializable(v) for k, v in data.items()}
