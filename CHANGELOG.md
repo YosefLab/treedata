@@ -8,13 +8,15 @@ and this project adheres to [Semantic Versioning][].
 [keep a changelog]: https://keepachangelog.com/en/1.0.0/
 [semantic versioning]: https://semver.org/spec/v2.0.0.html
 
-## [Unreleased]
+## [0.0.4] - 2024-09-02
 
 ### Added
 
 ### Changed
 
 ### Fixed
+
+-   Fixed typing bug introduced by anndata update (#29)
 
 ## [0.0.3] - 2024-08-21
 
