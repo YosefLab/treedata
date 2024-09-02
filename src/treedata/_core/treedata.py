@@ -16,7 +16,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import zarr
-from anndata._core.index import Index, Index1D, _subset
+from anndata._core.index import _subset
 from anndata._io import write_h5ad, write_zarr
 from scipy import sparse
 
@@ -28,6 +28,9 @@ from .aligned_mapping import (
 
 if TYPE_CHECKING:
     from os import PathLike
+
+    Index1D = slice | int | str | np.int64 | np.ndarray
+    Index = Index1D | tuple[Index1D, Index1D] | sparse.spmatrix | sparse.sparray
 
 
 class TreeData(ad.AnnData):
