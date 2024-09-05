@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Iterable, Mapping, MutableMapping, Sequence
 from copy import deepcopy
 from pathlib import Path
@@ -11,16 +10,11 @@ from typing import (
 )
 
 import anndata as ad
-import h5py
 import networkx as nx
 import numpy as np
 import pandas as pd
-import zarr
 from anndata._core.index import _subset
-from anndata._io import write_h5ad, write_zarr
 from scipy import sparse
-
-from treedata._utils import digraph_to_dict, make_serializable
 
 from .aligned_mapping import (
     AxisTrees,
@@ -181,8 +175,14 @@ class TreeData(ad.AnnData):
 
         # init from scratch
         else:
-            self._tree_label = label
-            self._allow_overlap = allow_overlap
+            if isinstance(label, str) or label is None:
+                self._tree_label = label
+            else:
+                raise ValueError("label has to be a string or None")
+            if isinstance(allow_overlap, bool) or isinstance(allow_overlap, np.bool_):
+                self._allow_overlap = bool(allow_overlap)
+            else:
+                raise ValueError("allow_overlap has to be a boolean")
             self._obst = AxisTrees(self, 0, vals=obst)
             self._vart = AxisTrees(self, 1, vals=vart)
 
@@ -281,16 +281,6 @@ class TreeData(ad.AnnData):
         """Convert this TreeData object to an AnnData object."""
         return ad.AnnData(self)
 
-    def _treedata_attrs(self) -> dict:
-        """Dictionary of TreeData attributes"""
-        attrs = {
-            "obst": {k: digraph_to_dict(v) for k, v in self.obst.items()},
-            "vart": {k: digraph_to_dict(v) for k, v in self.vart.items()},
-            "label": self.label,
-            "allow_overlap": self.allow_overlap,
-        }
-        return make_serializable(attrs)
-
     def _mutated_copy(self, **kwargs):
         """Creating TreeData with attributes optionally specified via kwargs."""
         if self.isbacked:
@@ -366,7 +356,7 @@ class TreeData(ad.AnnData):
         filename: PathLike | None = None,
         compression: Literal["gzip", "lzf"] | None = None,
         compression_opts: int | Any = None,
-        as_dense: Sequence[str] = (),
+        **kwargs,
     ):
         """Write `.h5ad`-formatted hdf5 file.
 
@@ -378,27 +368,18 @@ class TreeData(ad.AnnData):
             [`lzf`, `gzip`], see the h5py :ref:`dataset_compression`.
         compression_opts
             [`lzf`, `gzip`], see the h5py :ref:`dataset_compression`.
-        as_dense
-            Sparse arrays in TreeData object to write as dense. Currently only
-            supports `X` and `raw/X`.
         """
+        from .write import write_h5ad
+
         if filename is None and not self.isbacked:
             raise ValueError("Provide a filename!")
         if filename is None:
             filename = self.filename
 
-        write_h5ad(
-            Path(filename),
-            self,
-            compression=compression,
-            compression_opts=compression_opts,
-            as_dense=as_dense,
-        )
+        write_h5ad(Path(filename), self, compression=compression, compression_opts=compression_opts)
 
-        with h5py.File(filename, "a") as f:
-            if "raw.treedata" in f:
-                del f["raw.treedata"]
-            f.create_dataset("raw.treedata", data=json.dumps(self._treedata_attrs()))
+        if self.isbacked:
+            self.file.filename = filename
 
     write = write_h5ad  # a shortcut and backwards compat
 
@@ -406,6 +387,7 @@ class TreeData(ad.AnnData):
         self,
         store: MutableMapping | PathLike,
         chunks: bool | int | tuple[int, ...] | None = None,
+        **kwargs,
     ):
         """Write a hierarchical Zarr array store.
 
@@ -416,12 +398,9 @@ class TreeData(ad.AnnData):
         chunks
             Chunk shape.
         """
-        write_zarr(store, self.to_adata(), chunks=chunks)
+        from .write import write_zarr
 
-        with zarr.open(store, mode="a") as f:
-            if "treedata" in f:
-                del f["raw.treedata"]
-            f.create_dataset("raw.treedata", data=json.dumps(self._treedata_attrs()))
+        write_zarr(Path(store), self, chunks=chunks)
 
     def to_memory(self, copy=False) -> TreeData:
         """Return a new AnnData object with all backed arrays loaded into memory.

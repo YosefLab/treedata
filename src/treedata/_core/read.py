@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import MutableMapping, Sequence
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import (
     Literal,
@@ -9,37 +9,84 @@ from typing import (
 
 import anndata as ad
 import h5py
+import networkx as nx
 import zarr
-from scipy import sparse
 
-from treedata._core.aligned_mapping import AxisTrees
 from treedata._core.treedata import TreeData
-from treedata._utils import dict_to_digraph
 
 
-def _tdata_from_adata(tdata, treedata_attrs=None) -> TreeData:
-    """Create a TreeData object parsing attribute from AnnData uns field."""
-    tdata.__class__ = TreeData
+def _dict_to_digraph(graph_dict: dict) -> nx.DiGraph:
+    """Convert a dictionary to a networkx.DiGraph."""
+    G = nx.DiGraph()
+    # Add nodes and their attributes
+    for node, attrs in graph_dict["nodes"].items():
+        G.add_node(node, **attrs)
+    # Add edges and their attributes
+    for source, targets in graph_dict["edges"].items():
+        for target, attrs in targets.items():
+            G.add_edge(source, target, **attrs)
+    return G
+
+
+def _parse_axis_trees(data: str) -> dict:
+    """Parse AxisTrees from a string."""
+    return {k: _dict_to_digraph(v) for k, v in json.loads(data).items()}
+
+
+def _parse_legacy(treedata_attrs: dict) -> dict:
+    """Parse tree attributes from AnnData uns field."""
     if treedata_attrs is not None:
-        tdata._tree_label = treedata_attrs["label"] if "label" in treedata_attrs.keys() else None
-        tdata._allow_overlap = bool(treedata_attrs["allow_overlap"])
-        tdata._obst = AxisTrees(tdata, 0, vals={k: dict_to_digraph(v) for k, v in treedata_attrs["obst"].items()})
-        tdata._vart = AxisTrees(tdata, 1, vals={k: dict_to_digraph(v) for k, v in treedata_attrs["vart"].items()})
+        for j in ["obst", "vart"]:
+            if j in treedata_attrs:
+                treedata_attrs[j] = {k: _dict_to_digraph(v) for k, v in treedata_attrs[j].items()}
+        treedata_attrs["allow_overlap"] = bool(treedata_attrs["allow_overlap"])
+        treedata_attrs["label"] = treedata_attrs["label"] if "label" in treedata_attrs.keys() else None
+    return treedata_attrs
+
+
+def _read_raw(f, backed):
+    """Read raw from file."""
+    d = {}
+    for k in ["obs", "var"]:
+        if f"raw/{k}" in f:
+            d[k] = ad.experimental.read_elem(f[f"raw/{k}"])
+    if not backed:
+        d["X"] = ad.experimental.read_elem(f["raw/X"])
+    return d
+
+
+def _read_tdata(f, filename, backed) -> dict:
+    """Read TreeData from file."""
+    d = {}
+    if backed is None:
+        backed = False
+    elif backed is True:
+        backed = "r"
+    # Read X if not backed
+    if not backed:
+        d["X"] = ad.experimental.read_elem(f["X"])
     else:
-        tdata._tree_label = None
-        tdata._allow_overlap = False
-        tdata._obst = AxisTrees(tdata, 0)
-        tdata._vart = AxisTrees(tdata, 1)
-    return tdata
+        d.update({"filename": filename, "filemode": backed})
+    # Read standard elements
+    for k in ["obs", "var", "obsm", "varm", "obsp", "varp", "layers", "uns", "label", "allow_overlap"]:
+        if k in f:
+            d[k] = ad.experimental.read_elem(f[k])
+    # Read raw
+    if "raw" in f:
+        d["raw"] = _read_raw(f, backed)
+    # Read axis tree elements
+    for k in ["obst", "vart"]:
+        if k in f:
+            d[k] = _parse_axis_trees(ad.experimental.read_elem(f[k]))
+    # Read legacy treedata format
+    if "raw.treedata" in f:
+        d.update(_parse_legacy(json.loads(ad.experimental.read_elem(f["raw.treedata"]))))
+    return d
 
 
 def read_h5ad(
     filename: str | Path = None,
     backed: Literal["r", "r+"] | bool | None = None,
-    *,
-    as_sparse: Sequence[str] = (),
-    as_sparse_fmt: type[sparse.spmatrix] = sparse.csr_matrix,
-    chunk_size: int = 6000,
 ) -> TreeData:
     """Read `.h5ad`-formatted hdf5 file.
 
@@ -52,33 +99,10 @@ def read_h5ad(
         instead of fully loading it into memory (`memory` mode).
         If you want to modify backed attributes of the TreeData object,
         you need to choose `'r+'`.
-    as_sparse
-        If an array was saved as dense, passing its name here will read it as
-        a sparse_matrix, by chunk of size `chunk_size`.
-    as_sparse_fmt
-        Sparse format class to read elements from `as_sparse` in as.
-    chunk_size
-        Used only when loading sparse dataset that is stored as dense.
-        Loading iterates through chunks of the dataset of this row size
-        until it reads the whole dataset.
-        Higher size means higher memory consumption and higher (to a point)
-        loading speed.
     """
-    adata = ad.read_h5ad(
-        filename,
-        backed=backed,
-        as_sparse=as_sparse,
-        as_sparse_fmt=as_sparse_fmt,
-        chunk_size=chunk_size,
-    )
     with h5py.File(filename, "r") as f:
-        if "raw.treedata" in f:
-            treedata_attrs = json.loads(f["raw.treedata"][()])
-        else:
-            treedata_attrs = None
-    tdata = _tdata_from_adata(adata, treedata_attrs)
-
-    return tdata
+        d = _read_tdata(f, filename, backed)
+    return TreeData(**d)
 
 
 def read_zarr(store: str | Path | MutableMapping | zarr.Group) -> TreeData:
@@ -89,13 +113,6 @@ def read_zarr(store: str | Path | MutableMapping | zarr.Group) -> TreeData:
     store
         The filename, a :class:`~typing.MutableMapping`, or a Zarr storage class.
     """
-    adata = ad.read_zarr(store)
-
     with zarr.open(store, mode="r") as f:
-        if "raw.treedata" in f:
-            treedata_attrs = json.loads(f["raw.treedata"][()])
-        else:
-            treedata_attrs = None
-    tdata = _tdata_from_adata(adata, treedata_attrs)
-
-    return tdata
+        d = _read_tdata(f, store, backed=False)
+    return TreeData(**d)
