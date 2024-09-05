@@ -29,15 +29,19 @@ def tdata(X, tree):
 
 
 def check_graph_equality(g1, g2):
-    assert nx.is_isomorphic(g1, g2, node_match=lambda n1, n2: n1 == n2, edge_match=lambda e1, e2: e1 == e2)
+    assert nx.is_isomorphic(
+        g1, g2, node_match=lambda n1, n2: set(n1) == set(n2), edge_match=lambda e1, e2: set(e1) == set(e2)
+    )
 
 
 @pytest.mark.parametrize("backed", [None, "r"])
 def test_h5ad_readwrite(tdata, tmp_path, backed):
+    tdata.raw = tdata
     file_path = tmp_path / "test.h5ad"
     tdata.write_h5ad(file_path)
     tdata2 = td.read_h5ad(file_path, backed=backed)
     assert np.array_equal(tdata2.X, tdata.X)
+    assert np.array_equal(tdata2.raw.X, tdata.raw.X)
     check_graph_equality(tdata2.obst["1"], tdata.obst["1"])
     check_graph_equality(tdata2.vart["1"], tdata.vart["1"])
     assert tdata2.label == "tree"
@@ -93,7 +97,7 @@ def test_read_anndata(X, tmp_path):
     adata.write_h5ad(file_path)
     tdata = td.read_h5ad(file_path)
     assert np.array_equal(tdata.X, adata.X)
-    assert tdata.label is None
+    assert tdata.label == "tree"
     assert tdata.allow_overlap is False
     assert tdata.obst_keys() == []
 

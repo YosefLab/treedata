@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning][].
 [keep a changelog]: https://keepachangelog.com/en/1.0.0/
 [semantic versioning]: https://semver.org/spec/v2.0.0.html
 
+## [Unrealeased]
+
+### Added
+
+### Changed
+
+-   Encoding of `treedata` attributes in h5ad and zarr files. `label`, `allow_overlap`, `obst`, and `vart` are now separate fields in the file. (#31)
+
+### Fixed
+
+-   `TreeData` objects with `.raw` specified can now be read (#31)
+
 ## [0.0.4] - 2024-09-02
 
 ### Added
