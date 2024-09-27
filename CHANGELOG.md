@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning][].
 
 ### Changed
 
+### Fixed
+
+
+## [0.1.0] - 2024-09-27
+
+### Added
+
+### Changed
+
 -   Encoding of `treedata` attributes in h5ad and zarr files. `label`, `allow_overlap`, `obst`, and `vart` are now separate fields in the file. (#31)
 
 ### Fixed
