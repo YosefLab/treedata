@@ -30,3 +30,6 @@ __pycache__/
 
 # Prettier
 /node_modules/
+
+# Environment
+environment.yml

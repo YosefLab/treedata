@@ -13,9 +13,9 @@ from typing import Any, Literal
 
 import anndata as ad
 import pandas as pd
-from anndata._core.merge import _resolve_dim, resolve_merge_strategy
+from anndata._core.merge import resolve_merge_strategy
 
-from treedata._utils import combine_trees
+from treedata._utils import _resolve_axis, combine_trees
 
 from .treedata import TreeData
 
@@ -25,7 +25,7 @@ StrategiesLiteral = Literal["same", "unique", "first", "only"]
 def concat(
     tdatas: Collection[TreeData] | typing.Mapping[str, TreeData],
     *,
-    axis: Literal[0, 1] = 0,
+    axis: Literal["obs", 0, "var", 1] = "obs",
     join: Literal["inner", "outer"] = "inner",
     merge: StrategiesLiteral | Callable | None = None,
     uns_merge: StrategiesLiteral | Callable | None = None,
@@ -74,8 +74,8 @@ def concat(
         Whether pairwise elements along the concatenated dimension should be included.
         This is False by default, since the resulting arrays are often not meaningful.
     """
-    axis, dim = _resolve_dim(axis=axis)
-    alt_axis, alt_dim = _resolve_dim(axis=1 - axis)
+    axis, dim = _resolve_axis(axis)
+    alt_axis, alt_dim = _resolve_axis(axis=1 - axis)
     merge = resolve_merge_strategy(merge)
 
     # Check indices
