@@ -13,9 +13,13 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import zarr
+from packaging import version
 
 from treedata._core.aligned_mapping import AxisTrees
 from treedata._core.treedata import TreeData
+
+ANDATA_VERSION = version.parse(ad.__version__)
+USE_EXPERIMENTAL = ANDATA_VERSION < version.parse("0.11.0")
 
 
 def _make_serializable(data: dict) -> dict:
@@ -32,6 +36,14 @@ def _make_serializable(data: dict) -> dict:
         return data.tolist()
     else:
         return data
+
+
+def _write_elem(f, k, elem, *, dataset_kwargs) -> None:
+    """Write an element to a storage group using anndata encoding."""
+    if USE_EXPERIMENTAL:
+        ad.experimental.write_elem(f, k, elem, dataset_kwargs=dataset_kwargs)
+    else:
+        ad.io.write_elem(f, k, elem, dataset_kwargs=dataset_kwargs)
 
 
 def _digraph_to_dict(G: nx.DiGraph) -> dict:
@@ -61,20 +73,20 @@ def _write_tdata(f, tdata, filename, **kwargs) -> None:
     tdata.strings_to_categoricals()
     # Write X if not backed
     if not (tdata.isbacked and Path(tdata.filename) == Path(filename)):
-        ad.experimental.write_elem(f, "X", tdata.X, dataset_kwargs=kwargs)
+        _write_elem(f, "X", tdata.X, dataset_kwargs=kwargs)
     # Write array elements
     for key in ["obs", "var", "label", "allow_overlap"]:
-        ad.experimental.write_elem(f, key, getattr(tdata, key), dataset_kwargs=kwargs)
+        _write_elem(f, key, getattr(tdata, key), dataset_kwargs=kwargs)
     # Write group elements
     for key in ["obsm", "varm", "obsp", "varp", "layers", "uns"]:
-        ad.experimental.write_elem(f, key, dict(getattr(tdata, key)), dataset_kwargs=kwargs)
+        _write_elem(f, key, dict(getattr(tdata, key)), dataset_kwargs=kwargs)
     # Write axis tree elements
     for key in ["obst", "vart"]:
-        ad.experimental.write_elem(f, key, _serialize_axis_trees(getattr(tdata, key)), dataset_kwargs=kwargs)
+        _write_elem(f, key, _serialize_axis_trees(getattr(tdata, key)), dataset_kwargs=kwargs)
     # Write raw
     if tdata.raw is not None:
         tdata.strings_to_categoricals(tdata.raw.var)
-        ad.experimental.write_elem(f, "raw", tdata.raw, dataset_kwargs=kwargs)
+        _write_elem(f, "raw", tdata.raw, dataset_kwargs=kwargs)
     # Close the file
     tdata.file.close()
 

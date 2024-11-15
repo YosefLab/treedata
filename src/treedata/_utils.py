@@ -1,4 +1,5 @@
 from collections import deque
+from typing import Literal
 
 import networkx as nx
 
@@ -34,3 +35,14 @@ def combine_trees(subsets: list[nx.DiGraph]) -> nx.DiGraph:
 
     # The combined_tree now contains all nodes and edges from the subsets
     return combined_tree
+
+
+def _resolve_axis(
+    axis: Literal["obs", 0, "var", 1],
+) -> tuple[Literal[0], Literal["obs"]] | tuple[Literal[1], Literal["var"]]:
+    """Resolve axis argument."""
+    if axis in {0, "obs"}:
+        return (0, "obs")
+    if axis in {1, "var"}:
+        return (1, "var")
+    raise ValueError(f"`axis` must be either 0, 1, 'obs', or 'var', was {axis}")

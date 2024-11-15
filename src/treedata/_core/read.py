@@ -11,8 +11,20 @@ import anndata as ad
 import h5py
 import networkx as nx
 import zarr
+from packaging import version
 
 from treedata._core.treedata import TreeData
+
+ANDATA_VERSION = version.parse(ad.__version__)
+USE_EXPERIMENTAL = ANDATA_VERSION < version.parse("0.11.0")
+
+
+def _read_elem(elem):
+    """Read an element from a store."""
+    if USE_EXPERIMENTAL:
+        return ad.experimental.read_elem(elem)
+    else:
+        return ad.io.read_elem(elem)
 
 
 def _dict_to_digraph(graph_dict: dict) -> nx.DiGraph:
@@ -49,9 +61,9 @@ def _read_raw(f, backed):
     d = {}
     for k in ["obs", "var"]:
         if f"raw/{k}" in f:
-            d[k] = ad.experimental.read_elem(f[f"raw/{k}"])
+            d[k] = _read_elem(f[f"raw/{k}"])
     if not backed:
-        d["X"] = ad.experimental.read_elem(f["raw/X"])
+        d["X"] = _read_elem(f["raw/X"])
     return d
 
 
@@ -64,23 +76,23 @@ def _read_tdata(f, filename, backed) -> dict:
         backed = "r"
     # Read X if not backed
     if not backed:
-        d["X"] = ad.experimental.read_elem(f["X"])
+        d["X"] = _read_elem(f["X"])
     else:
         d.update({"filename": filename, "filemode": backed})
     # Read standard elements
     for k in ["obs", "var", "obsm", "varm", "obsp", "varp", "layers", "uns", "label", "allow_overlap"]:
         if k in f:
-            d[k] = ad.experimental.read_elem(f[k])
+            d[k] = _read_elem(f[k])
     # Read raw
     if "raw" in f:
         d["raw"] = _read_raw(f, backed)
     # Read axis tree elements
     for k in ["obst", "vart"]:
         if k in f:
-            d[k] = _parse_axis_trees(ad.experimental.read_elem(f[k]))
+            d[k] = _parse_axis_trees(_read_elem(f[k]))
     # Read legacy treedata format
     if "raw.treedata" in f:
-        d.update(_parse_legacy(json.loads(ad.experimental.read_elem(f["raw.treedata"]))))
+        d.update(_parse_legacy(json.loads(_read_elem(f["raw.treedata"]))))
     return d
 
 

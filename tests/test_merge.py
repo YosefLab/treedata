@@ -35,7 +35,7 @@ def tdata_list(tdata):
 
 def test_concat(tdata_list):
     # outer join
-    tdata = td.concat(tdata_list, axis=0, label="subset", join="outer")
+    tdata = td.concat(tdata_list, axis="obs", label="subset", join="outer")
     print(tdata)
     assert list(tdata.obs["subset"]) == ["0"] * 2 + ["1"] * 2 + ["2"] * 4
     assert tdata.obst["0"].number_of_nodes() == 15

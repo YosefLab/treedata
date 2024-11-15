@@ -4,7 +4,7 @@ requires = ["hatchling"]
 
 [project]
 name = "treedata"
-version = "0.1.0"
+version = "0.1.1"
 description = "anndata with trees"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -22,6 +22,7 @@ dependencies = [
     "anndata",
     "h5py",
     "numpy",
+    "packaging",
     "pandas",
     "pathlib",
     "pyarrow",

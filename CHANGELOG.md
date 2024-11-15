@@ -16,6 +16,18 @@ and this project adheres to [Semantic Versioning][].
 
 ### Fixed
 
+## [0.1.1] - 2024-11-25
+
+### Added
+
+-   Axis in `td.concat` can now be specified with `obs` and `var` (#40)
+
+### Changed
+
+### Fixed
+
+-   Fixed `ImportError: cannot import name '_resolve_dim' from 'anndata._core.merge'` caused by anndata update (#40)
+
 ## [0.1.0] - 2024-09-27
 
 ### Added
