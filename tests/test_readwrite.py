@@ -102,6 +102,14 @@ def test_read_anndata(X, tmp_path):
     assert tdata.obst_keys() == []
 
 
+def test_read_no_X(X, tmp_path):
+    tdata = td.TreeData(obs=pd.DataFrame(index=["0", "1", "2"]))
+    file_path = tmp_path / "test.h5ad"
+    tdata.write_h5ad(file_path)
+    tdata2 = td.read_h5ad(file_path)
+    assert tdata2.X is None
+
+
 def test_h5ad_backing(tdata, tree, tmp_path):
     tdata_copy = tdata.copy()
     assert not tdata.isbacked
