@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning][].
 
 ### Fixed
 
+## [0.1.2] - 2024-12-02
+
+### Added
+
+### Changed
+
+### Fixed
+
+-   Fixed `KeyError: "Unable to synchronously open object (object 'X' doesn't exist)"'` when reading h5ad without X field (#40)
+
 ## [0.1.1] - 2024-11-25
 
 ### Added

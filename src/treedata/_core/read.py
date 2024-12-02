@@ -76,7 +76,8 @@ def _read_tdata(f, filename, backed) -> dict:
         backed = "r"
     # Read X if not backed
     if not backed:
-        d["X"] = _read_elem(f["X"])
+        if "X" in f:
+            d["X"] = _read_elem(f["X"])
     else:
         d.update({"filename": filename, "filemode": backed})
     # Read standard elements
