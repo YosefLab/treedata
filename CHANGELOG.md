@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning][].
 
 ### Fixed
 
+## [0.1.3] - 2025-01-20
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Fixed `ImportError: zarr-python major version > 2 is not supported'` error with Python 12 (#46)
+  
 ## [0.1.2] - 2024-12-02
 
 ### Added
