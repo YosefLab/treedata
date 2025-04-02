@@ -12,7 +12,7 @@ maintainers = [
   { name = "William Colgan", email = "wcolgan@mit.edu" },
 ]
 authors = [
-  { name = "William Colgan", email = "wcolgan@mit.edu" },
+  { name = "William Colgan" },
 ]
 requires-python = ">=3.10"
 classifiers = [
