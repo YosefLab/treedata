@@ -56,8 +56,8 @@ optional-dependencies.doc = [
 ]
 optional-dependencies.test = [
   "coverage",
-  "pytest",
   "joblib",
+  "pytest",
   "scanpy",
 ]
 # https://docs.pypi.org/project_metadata/#project-urls
