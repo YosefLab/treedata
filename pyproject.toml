@@ -12,7 +12,7 @@ maintainers = [
   { name = "William Colgan", email = "wcolgan@mit.edu" },
 ]
 authors = [
-  { name = "William Colgan", email = "wcolgan@mit.edu"  },
+  { name = "William Colgan", email = "wcolgan@mit.edu" },
 ]
 requires-python = ">=3.10"
 classifiers = [
@@ -23,16 +23,16 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "anndata",
-    "h5py",
-    "numpy",
-    "packaging",
-    "pandas",
-    "pathlib",
-    "pyarrow",
-    "networkx",
-    "session-info2",
-    "zarr>=2,<3",
+  "anndata",
+  "h5py",
+  "networkx",
+  "numpy",
+  "packaging",
+  "pandas",
+  "pathlib",
+  "pyarrow",
+  "session-info2",
+  "zarr>=2,<3",
 ]
 optional-dependencies.dev = [
   "pre-commit",
