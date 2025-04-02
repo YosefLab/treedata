@@ -98,7 +98,6 @@ Alternatively, you can run all tests from the command line by executing
 hatch test  # test with the highest supported Python version
 # or
 hatch test --all  # test with all supported Python versions
-```
 
 ::::
 
@@ -210,5 +209,3 @@ make html
 (xdg-)open _build/html/index.html
 ```
 
-::::
-:::::
