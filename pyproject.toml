@@ -58,7 +58,6 @@ optional-dependencies.test = [
   "coverage",
   "joblib",
   "pytest",
-  "scanpy",
 ]
 # https://docs.pypi.org/project_metadata/#project-urls
 urls.Documentation = "https://treedata.readthedocs.io/"
