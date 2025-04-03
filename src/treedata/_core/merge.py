@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import typing
 import warnings
-from collections.abc import (
-    Callable,
-    Collection,
-)
+from collections.abc import Callable, Collection
 from functools import reduce
 from typing import Any, Literal
 
@@ -76,7 +73,14 @@ def concat(
     """
     axis, dim = _resolve_axis(axis)
     alt_axis, alt_dim = _resolve_axis(axis=1 - axis)
-    merge = resolve_merge_strategy(merge)
+
+    # Convert dict to list
+    if isinstance(tdatas, typing.Mapping):
+        if keys is not None:
+            raise TypeError("Cannot specify categories in both mapping keys and using `keys`. Only specify this once.")
+        keys, tdatas = list(tdatas.keys()), list(tdatas.values())
+    else:
+        tdatas = list(tdatas)
 
     # Check indices
     concat_indices = pd.concat([pd.Series(getattr(t, f"{dim}_names")) for t in tdatas], ignore_index=True)
@@ -103,12 +107,12 @@ def concat(
     )
 
     # Create new TreeData object
-    label = {t.label for t in tdatas if t.label is not None}
-    if len(label) > 1:
+    label_set = {t.label for t in tdatas if t.label is not None}
+    if len(label_set) > 1:
         warnings.warn("Multiple label values found. Setting to `tree`.", stacklevel=2)
         label = "tree"
     else:
-        label = next(iter(label), None)
+        label = next(iter(label_set), None)
     allow_overlap = any(t.allow_overlap for t in tdatas)
     tdata = TreeData(adata, allow_overlap=allow_overlap, label=label)
 
@@ -121,11 +125,12 @@ def concat(
         getattr(tdata, f"{dim}t")[key] = tree
 
     # Trees for other axis
+    merge_function = resolve_merge_strategy(merge)
     if join == "inner" and alt_axis == 0:
         tdatas = [t[alt_indices, :] for t in tdatas]
     elif join == "inner" and alt_axis == 1:
         tdatas = [t[:, alt_indices] for t in tdatas]
-    alt_trees = merge([getattr(t, f"{alt_dim}t") for t in tdatas])
+    alt_trees = merge_function([getattr(t, f"{alt_dim}t") for t in tdatas])
     for key, tree in alt_trees.items():
         getattr(tdata, f"{alt_dim}t")[key] = tree
 

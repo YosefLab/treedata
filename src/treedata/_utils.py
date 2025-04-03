@@ -4,7 +4,7 @@ from typing import Literal
 import networkx as nx
 
 
-def subset_tree(tree: nx.DiGraph, leaves: list[str], asview: bool) -> nx.DiGraph:
+def subset_tree(tree: nx.DiGraph, leaves: list[str | int] | set[str | int], asview: bool) -> nx.DiGraph:
     """Subset tree."""
     keep_nodes = set(leaves)
     nodes_to_check = deque()

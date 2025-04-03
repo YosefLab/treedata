@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import MutableMapping
+from os import PathLike
 from pathlib import Path
-from typing import (
-    Any,
-    Literal,
-)
+from typing import Any, Literal
 
 import anndata as ad
 import h5py
@@ -22,7 +21,7 @@ ANDATA_VERSION = version.parse(ad.__version__)
 USE_EXPERIMENTAL = ANDATA_VERSION < version.parse("0.11.0")
 
 
-def _make_serializable(data: dict) -> dict:
+def _make_serializable(data: Any) -> Any:
     """Make a dictionary serializable."""
     if isinstance(data, dict):
         return {k: _make_serializable(v) for k, v in data.items()}
@@ -57,7 +56,7 @@ def _digraph_to_dict(G: nx.DiGraph) -> dict:
     return graph_dict
 
 
-def _serialize_axis_trees(trees: AxisTrees) -> dict:
+def _serialize_axis_trees(trees: AxisTrees) -> str:
     """Serialize AxisTrees."""
     d = {k: _digraph_to_dict(v) for k, v in trees.items()}
     return json.dumps(_make_serializable(d))
@@ -92,7 +91,7 @@ def _write_tdata(f, tdata, filename, **kwargs) -> None:
 
 
 def write_h5ad(
-    filename: str | Path,
+    filename: PathLike | None,
     tdata: TreeData,
     compression: Literal["gzip", "lzf"] | None = None,
     compression_opts: int | Any = None,
@@ -118,7 +117,7 @@ def write_h5ad(
         _write_tdata(f, tdata, filename, compression=compression, compression_opts=compression_opts, **kwargs)
 
 
-def write_zarr(filename: str | Path, tdata: TreeData, **kwargs) -> None:
+def write_zarr(filename: MutableMapping | PathLike, tdata: TreeData, **kwargs) -> None:
     """Write `.zarr`-formatted zarr file.
 
     Parameters
