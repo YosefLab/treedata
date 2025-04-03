@@ -2,10 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import MutableMapping
-from pathlib import Path
-from typing import (
-    Literal,
-)
+from typing import TYPE_CHECKING, Literal
 
 import anndata as ad
 import h5py
@@ -14,6 +11,9 @@ import zarr
 from packaging import version
 
 from treedata._core.treedata import TreeData
+
+if TYPE_CHECKING:
+    from os import PathLike
 
 ANDATA_VERSION = version.parse(ad.__version__)
 USE_EXPERIMENTAL = ANDATA_VERSION < version.parse("0.11.0")
@@ -98,7 +98,7 @@ def _read_tdata(f, filename, backed) -> dict:
 
 
 def read_h5ad(
-    filename: str | Path = None,
+    filename: str | PathLike | None = None,
     backed: Literal["r", "r+"] | bool | None = None,
 ) -> TreeData:
     """Read `.h5ad`-formatted hdf5 file.
@@ -118,7 +118,7 @@ def read_h5ad(
     return TreeData(**d)
 
 
-def read_zarr(store: str | Path | MutableMapping | zarr.Group) -> TreeData:
+def read_zarr(store: str | PathLike | MutableMapping | zarr.Group) -> TreeData:
     """Read from a hierarchical Zarr array store.
 
     Parameters

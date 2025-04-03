@@ -45,6 +45,10 @@ def test_concat(tdata_list):
     tdata = td.concat(tdata_list, axis=0, label="subset", join="inner")
     assert list(tdata.obs["subset"]) == ["0"] * 2 + ["1"] * 2 + ["2"] * 4
     assert tdata.shape == (8, 4)
+    # test join dictonary
+    tdata_dict = {str(i): tdata for i, tdata in enumerate(tdata_list)}
+    tdata = td.concat(tdata_dict, axis=0, label="subset", join="inner")
+    assert tdata.shape == (8, 4)
 
 
 def test_merge_outer(tdata_list):

@@ -2,12 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, MutableMapping, Sequence
 from copy import deepcopy
-from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Literal,
-)
+from typing import TYPE_CHECKING, Any, Literal
 
 import anndata as ad
 import networkx as nx
@@ -16,14 +11,12 @@ import pandas as pd
 from anndata._core.index import _subset
 from scipy import sparse
 
-from .aligned_mapping import (
-    AxisTrees,
-)
+from .aligned_mapping import AxisTrees, AxisTreesView
 
 if TYPE_CHECKING:
     from os import PathLike
 
-    Index1D = slice | int | str | np.int64 | np.ndarray
+    Index1D = slice | int | str | np.int64 | np.ndarray | list[str | int] | pd.Index
     Index = Index1D | tuple[Index1D, Index1D] | sparse.spmatrix | sparse.sparray
 
 
@@ -99,8 +92,8 @@ class TreeData(ad.AnnData):
         *,
         obsp: np.ndarray | Mapping[str, Sequence[Any]] | None = None,
         varp: np.ndarray | Mapping[str, Sequence[Any]] | None = None,
-        oidx: Index1D = None,
-        vidx: Index1D = None,
+        oidx: Index1D | None = None,
+        vidx: Index1D | None = None,
     ):
         if asview:
             if not isinstance(X, TreeData):
@@ -186,12 +179,12 @@ class TreeData(ad.AnnData):
             self._obst = AxisTrees(self, 0, vals=obst)
             self._vart = AxisTrees(self, 1, vals=vart)
 
-    def _init_as_view(self, tdata_ref: TreeData, oidx: Index, vidx: Index):
+    def _init_as_view(self, tdata_ref: TreeData, oidx: Index1D | None, vidx: Index1D | None):
         super()._init_as_view(tdata_ref, oidx=oidx, vidx=vidx)
 
         # view of obst and vart
-        self._obst = tdata_ref.obst._view(self, (oidx,))
-        self._vart = tdata_ref.vart._view(self, (vidx,))
+        self._obst = tdata_ref.obst._view(self, oidx)
+        self._vart = tdata_ref.vart._view(self, vidx)
 
         # set attributes
         self._tree_label = tdata_ref._tree_label
@@ -206,7 +199,7 @@ class TreeData(ad.AnnData):
         return list(self._vart.keys())
 
     @property
-    def obst(self) -> AxisTrees:
+    def obst(self) -> AxisTrees | AxisTreesView:
         """Tree annotation of observations
 
         Stores for each key a :class:`~networkx.DiGraph` with leaf nodes in
@@ -216,7 +209,7 @@ class TreeData(ad.AnnData):
         return self._obst
 
     @property
-    def vart(self) -> AxisTrees:
+    def vart(self) -> AxisTrees | AxisTreesView:
         """Tree annotation of variables
 
         Stores for each key a :class:`~networkx.DiGraph` with leaf nodes in
@@ -268,7 +261,7 @@ class TreeData(ad.AnnData):
         else:
             return self._gen_repr(self.n_obs, self.n_vars)
 
-    def __getitem__(self, index: Index) -> TreeData:
+    def __getitem__(self, index: Any) -> TreeData:
         """Returns a sliced view of the object."""
         oidx, vidx = self._normalize_indices(index)
         return TreeData(self, oidx=oidx, vidx=vidx, asview=True)
@@ -376,7 +369,7 @@ class TreeData(ad.AnnData):
         if filename is None:
             filename = self.filename
 
-        write_h5ad(Path(filename), self, compression=compression, compression_opts=compression_opts)
+        write_h5ad(filename, self, compression=compression, compression_opts=compression_opts)
 
         if self.isbacked:
             self.file.filename = filename
@@ -400,7 +393,7 @@ class TreeData(ad.AnnData):
         """
         from .write import write_zarr
 
-        write_zarr(Path(store), self, chunks=chunks)
+        write_zarr(store, self, chunks=chunks)
 
     def to_memory(self, copy=False) -> TreeData:
         """Return a new AnnData object with all backed arrays loaded into memory.
