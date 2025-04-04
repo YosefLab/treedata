@@ -129,7 +129,7 @@ def test_mutability(X, tree):
     # Topology mutable on copy
     tree = tdata.obst["tree"].copy()
     tree.remove_node("1")
-    tdata.obst["tree"] = tree
+    tdata.obst["tree"] = tree  # type: ignore
     assert list(tdata.obst["tree"].nodes) == ["root", "0"]
 
 
@@ -137,7 +137,7 @@ def test_bad_tree(X):
     # Not directed graph
     not_di_graph = nx.Graph()
     with pytest.raises(ValueError):
-        _ = td.TreeData(X, obst={"tree": not_di_graph})
+        _ = td.TreeData(X, obst={"tree": not_di_graph})  # type: ignore
     # Has cycle
     has_cycle = nx.DiGraph()
     has_cycle.add_edges_from([("0", "1"), ("1", "0")])
