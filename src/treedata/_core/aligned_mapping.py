@@ -80,11 +80,21 @@ class AxisTreesBase(cabc.MutableMapping):
                 new_leaves = leaves.difference(self._tree_to_leaf[key])
             else:
                 new_leaves = leaves
-            if new_leaves.intersection(self._leaf_to_tree.keys()):
+            if self._check_tree_overlap(new_leaves):
                 raise ValueError(
                     "Leaf names overlap with leaf names of other trees. Set `allow_overlap=True` to allow this."
                 )
         return tree, leaves
+
+    def _check_tree_overlap(self, leaves=()) -> bool:
+        """Check if the leaves overlap with other trees."""
+        leaves = set(leaves)
+        for _, tree_leaves in self._tree_to_leaf.items():
+            if leaves.intersection(tree_leaves):
+                return True
+            else:
+                leaves = leaves.union(tree_leaves)
+        return False
 
     def _update_tree_labels(self):
         """Update the tree labels in the parent object."""

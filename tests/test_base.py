@@ -73,7 +73,7 @@ def test_tree_contains(X, tree, dim):
     assert "not_tree" not in getattr(tdata, f"{dim}t")
 
 
-@pytest.mark.filterwarnings
+@pytest.mark.filterwarnings  # type: ignore
 @pytest.mark.parametrize("dim", ["obs", "var"])
 def test_tree_label(X, tree, dim):
     # Test tree label
@@ -104,6 +104,17 @@ def test_tree_overlap(X, tree):
     tdata = td.TreeData(X, obst={"0": tree, "1": second_tree}, allow_overlap=True)
     check_graph_equality(tdata.obst["0"], tree)
     check_graph_equality(tdata.obst["1"], second_tree)
+    # Test set allow_overlap to True
+    tdata = td.TreeData(X, obst={"0": tree}, allow_overlap=False)
+    assert tdata.allow_overlap is False
+    tdata.allow_overlap = True
+    tdata.obst["1"] = tree
+    assert list(tdata.obst.keys()) == ["0", "1"]
+    assert tdata.allow_overlap
+    # Cannot set allow_overlap to False when overlap is present
+    with pytest.raises(ValueError):
+        tdata.allow_overlap = False
+    assert tdata.allow_overlap
 
 
 def test_repr(X, tree):
@@ -119,7 +130,7 @@ def test_repr(X, tree):
 
 
 def test_mutability(X, tree):
-    tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, label=None)
+    tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, label=None, allow_overlap=False)
     # Toplogy is immutable
     with pytest.raises(nx.NetworkXError):
         tdata.obst["tree"].remove_node("0")
@@ -195,3 +206,7 @@ def test_not_unique(X, tree, dim):
     with pytest.warns(UserWarning):
         setattr(tdata, f"{dim}t", {"tree": tree})
     assert getattr(tdata, f"{dim}_names").is_unique
+
+
+if __name__ == "__main__":
+    pytest.main(["-v", __file__])

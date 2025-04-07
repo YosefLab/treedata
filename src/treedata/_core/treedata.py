@@ -243,6 +243,18 @@ class TreeData(ad.AnnData):
         vart = AxisTrees(self, 1, vals=dict(value))
         self._vart = vart
 
+    @allow_overlap.setter
+    def allow_overlap(self, value):
+        if not isinstance(value, bool):
+            raise ValueError("allow_overlap has to be a boolean")
+        if not value:
+            for attr in ["obst", "vart"]:
+                if getattr(self, attr)._check_tree_overlap():
+                    raise ValueError(
+                        f"One or more trees in {attr} have overlapping nodes. Cannot set allow_overlap to False."
+                    )
+        self._allow_overlap = value
+
     def _gen_repr(self, n_obs, n_vars) -> str:
         if self.isbacked:
             backed_at = f" backed at {str(self.filename)!r}"
