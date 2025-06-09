@@ -21,6 +21,12 @@ def tdata(tree):
     yield td.TreeData(X=np.zeros((8, 8)), obst={"tree": tree}, vart={"tree": tree}, obs=df, var=df, allow_overlap=True)
 
 
+@pytest.fixture
+def nodes_tdata(tree):
+    df = pd.DataFrame({"anno": range(16)}, index=[str(i) for i in range(16)])
+    yield td.TreeData(X=np.zeros((16, 16)), obst={"tree": tree}, vart={"tree": tree}, obs=df, var=df, alignment="nodes")
+
+
 def test_views(tdata):
     # check that subset is view
     assert tdata[:, 0].is_view
@@ -34,7 +40,7 @@ def test_views(tdata):
     assert tdata_subset.obs["test"].tolist() == list(range(2))
 
 
-def test_views_subset_tree(tdata):
+def test_views_subset_leaves(tdata):
     expected_edges = [
         ("0", "1"),
         ("0", "2"),
@@ -57,6 +63,41 @@ def test_views_subset_tree(tdata):
     edges = list(tdata_subset.obst["tree"].edges)
     assert edges == expected_edges
     assert len(tdata.obst["tree"].edges) == 14
+    # now transition alignment to subset
+    tdata.alignment = "subset"
+    tdata_subset = tdata[[0, 1, 4], :]
+    assert tdata_subset.alignment == "subset"
+    assert tdata_subset.shape == (3, 8)
+    assert len(tdata_subset.obst["tree"].nodes) == 15
+
+
+def test_views_subset_nodes(nodes_tdata):
+    expected_edges = [
+        ("0", "1"),
+        ("0", "2"),
+        ("1", "3"),
+    ]
+    # subset with index
+    tdata_subset = nodes_tdata[[0, 1, 2, 3], :]
+    edges = list(tdata_subset.obst["tree"].edges)
+    assert set(edges) == set(expected_edges)
+    # subset with names
+    tdata_subset = nodes_tdata[["0", "1", "2", "3"], :]
+    edges = list(tdata_subset.obst["tree"].edges)
+    assert set(edges) == set(expected_edges)
+    # now transition to actual object
+    tdata_subset = tdata_subset.copy()
+    edges = list(tdata_subset.obst["tree"].edges)
+    assert set(edges) == set(expected_edges)
+    assert len(nodes_tdata.obst["tree"].edges) == 14
+    # invalid tree switches alignment to subset
+    with pytest.warns(UserWarning):
+        tdata_subset = nodes_tdata[["0", "1", "5"], :]
+    assert tdata_subset.alignment == "subset"
+    assert not tdata_subset.is_view
+    assert len(tdata_subset.obst["tree"].nodes) == 15
+    assert len(tdata_subset.vart["tree"].edges) == 14
+    assert tdata_subset.shape == (3, 16)
 
 
 def test_views_subset_trees():
@@ -73,6 +114,13 @@ def test_views_subset_trees():
     tdata_subset = tdata[["0", "1", "2"], :]
     assert list(tdata_subset.obst["tree1"].edges) == [("root", "0"), ("root", "1")]
     assert list(tdata_subset.obst["tree2"].edges) == [("root", "2")]
+    # node subset with multiple trees
+    obs = pd.DataFrame(index=["root", "0", "1", "2", "3"])
+    tdata = td.TreeData(obs=obs, allow_overlap=True, obst={"tree1": tree1, "tree2": tree2})
+    tdata_subset = tdata[["root", "0", "1"], :]
+    assert list(tdata_subset.obst["tree1"].edges) == [("root", "0"), ("root", "1")]
+    assert list(tdata_subset.obst["tree2"].edges) == []
+    assert list(tdata_subset.obst.keys()) == ["tree1", "tree2"]
 
 
 def test_views_copy():
@@ -83,7 +131,6 @@ def test_views_copy():
     tdata_subset = tdata.copy()[["0", "1"], :].copy()
     assert list(tdata_subset.obst["tree1"].edges) == [("root", "0"), ("root", "1")]
     assert list(tdata_subset.obst["tree2"].edges) == []
-    print(tdata_subset)
     tdata_subset = tdata.copy()[["2", "3"], :].copy()
     assert list(tdata_subset.obst["tree1"].edges) == []
     assert list(tdata_subset.obst["tree2"].edges) == [("root", "2"), ("root", "3")]
@@ -128,9 +175,7 @@ def test_views_set(tdata):
     tree = nx.DiGraph([("root", "0"), ("root", "1")])
     good_tree = nx.DiGraph([("root", "2"), ("root", "3")])
     tdata = td.TreeData(X=np.zeros((8, 8)), allow_overlap=False, obst={"tree": tree})
-    print(tdata.obs_names)
     tdata_subset = tdata[:4, :]
-    print(tdata_subset.obs_names)
     with pytest.warns(UserWarning):
         tdata_subset.obst["tree"] = good_tree
 

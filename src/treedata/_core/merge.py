@@ -9,6 +9,7 @@ from functools import reduce
 from typing import Any, Literal
 
 import anndata as ad
+import networkx as nx
 import pandas as pd
 from anndata._core.merge import resolve_merge_strategy
 
@@ -114,15 +115,24 @@ def concat(
     else:
         label = next(iter(label_set), None)
     allow_overlap = any(t.allow_overlap for t in tdatas)
-    tdata = TreeData(adata, allow_overlap=allow_overlap, label=label)
+    # set alignment to value if all the same else to "subset"
+    if len({t.alignment for t in tdatas}) > 1:
+        warnings.warn("Multiple alignment values found. Setting to `subset`.", stacklevel=2)
+        alignment = "subset"
+    else:
+        alignment = tdatas[0].alignment
+    tdata = TreeData(adata, allow_overlap=allow_overlap, label=label, alignment=alignment)
 
     # Trees for concatenation axis
     concat_trees = [getattr(t, f"{dim}t") for t in tdatas]
-    unique_keys = {key for mapping in concat_trees for key in mapping.keys()}
+    unique_keys = {key for alignment in concat_trees for key in alignment.keys()}
     for key in unique_keys:
-        trees = [mapping[key] for mapping in concat_trees if key in mapping]
-        tree = combine_trees(trees)
-        getattr(tdata, f"{dim}t")[key] = tree
+        trees = [alignment[key] for alignment in concat_trees if key in alignment]
+        if alignment != "leaves" and not all(nx.utils.graphs_equal(trees[0], tree) for tree in trees):
+            warnings.warn(f"Dropping `obst` key {key} due to inconsistent values.", stacklevel=2)
+        else:
+            tree = combine_trees(trees)
+            getattr(tdata, f"{dim}t")[key] = tree
 
     # Trees for other axis
     merge_function = resolve_merge_strategy(merge)

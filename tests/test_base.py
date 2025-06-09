@@ -31,7 +31,6 @@ def check_graph_equality(g1, g2):
 def test_creation(X, adata, tree):
     # Test creation with np array
     tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, label=None)
-    print(type(tdata))
     check_graph_equality(tdata.obst["tree"], tree)
     check_graph_equality(tdata.vart["tree"], tree)
     # Test creation with anndata
@@ -117,6 +116,30 @@ def test_tree_overlap(X, tree):
     assert tdata.allow_overlap
 
 
+def test_alignment(X, tree):
+    # Test node alignment
+    X = pd.DataFrame(X, index=["root", "0", "1"], columns=["root", "0", "1"])
+    tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, alignment="nodes")
+    assert tdata.alignment == "nodes"
+    # Test transition to subset
+    tdata.alignment = "subset"
+    assert tdata.alignment == "subset"
+    # Test invalid node alignment
+    with pytest.raises(ValueError):
+        tdata = td.TreeData(obs=pd.DataFrame(index=["0", "1"]), obst={"tree": tree}, alignment="nodes")
+    # Test subset alignment
+    X = pd.DataFrame(X, index=["1", "2", "3"], columns=["1", "2", "3"])
+    tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, alignment="subset")
+    assert tdata.alignment == "subset"
+    # Test invalid alignment transitions
+    with pytest.raises(ValueError):
+        tdata.alignment = "nodes"
+    assert tdata.alignment == "subset"
+    with pytest.raises(ValueError):
+        tdata.alignment = "leaves"
+    assert tdata.alignment == "subset"
+
+
 def test_repr(X, tree):
     tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, label=None)
     # TreeData
@@ -142,6 +165,14 @@ def test_mutability(X, tree):
     tree.remove_node("1")
     tdata.obst["tree"] = tree  # type: ignore
     assert list(tdata.obst["tree"].nodes) == ["root", "0"]
+
+
+def test_bad_alignment(tree):
+    obs = pd.DataFrame(index=["1", "bad"])
+    with pytest.raises(ValueError):
+        _ = td.TreeData(obs=obs, obst={"tree": tree}, alignment="leaves")
+    with pytest.raises(ValueError):
+        _ = td.TreeData(obs=obs, obst={"tree": tree}, alignment="nodes")
 
 
 def test_bad_tree(X):
