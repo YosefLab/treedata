@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Iterable, Mapping, MutableMapping, Sequence
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Literal
@@ -66,8 +67,14 @@ class TreeData(ad.AnnData):
     label
         Columns in `.obs` and `.var` to place tree key in. Default is "tree".
         If it's None, no column is added.
+    alignment
+        Alignment between trees and observations/variables. One of the following:
+
+        - `leaves`: All leaf names are present in the observation/variable names.
+        - `nodes`: All leaf and internal node names are present in the observation/variable names.
+        - `subset`: A subset of leaf and internal node names are present in the observation/variable names.
     allow_overlap
-        Whether overlapping trees are allowed. Default is False.
+        Whether trees containing overlapping sets of leaves or nodes are allowed. Default is False.
     """
 
     def __init__(
@@ -88,6 +95,7 @@ class TreeData(ad.AnnData):
         filemode: Literal["r", "r+"] | None = None,
         asview: bool = False,
         label: str | None = "tree",
+        alignment: Literal["leaves", "nodes", "subset"] = "leaves",
         allow_overlap: bool = False,
         *,
         obsp: np.ndarray | Mapping[str, Sequence[Any]] | None = None,
@@ -118,6 +126,7 @@ class TreeData(ad.AnnData):
                 filename=filename,
                 filemode=filemode,
                 label=label,
+                alignment=alignment,
                 allow_overlap=allow_overlap,
             )
 
@@ -140,6 +149,7 @@ class TreeData(ad.AnnData):
         filename=None,
         filemode=None,
         label=None,
+        alignment=None,
         allow_overlap=None,
     ):
         super()._init_as_actual(
@@ -165,6 +175,7 @@ class TreeData(ad.AnnData):
             self._allow_overlap = X.allow_overlap
             self._obst = X.obst
             self._vart = X.vart
+            self._alignment = X._alignment
 
         # init from scratch
         else:
@@ -172,6 +183,10 @@ class TreeData(ad.AnnData):
                 self._tree_label = label
             else:
                 raise ValueError("label has to be a string or None")
+            if alignment not in ["leaves", "nodes", "subset"]:
+                raise ValueError("alignment has to be one of ['leaves', 'nodes', 'subset']")
+            else:
+                self._alignment = alignment
             if isinstance(allow_overlap, bool) or isinstance(allow_overlap, np.bool_):
                 self._allow_overlap = bool(allow_overlap)
             else:
@@ -182,13 +197,26 @@ class TreeData(ad.AnnData):
     def _init_as_view(self, tdata_ref: TreeData, oidx: Index1D | None, vidx: Index1D | None):
         super()._init_as_view(tdata_ref, oidx=oidx, vidx=vidx)
 
+        # set attributes
+        self._tree_label = tdata_ref._tree_label
+        self._alignment = tdata_ref._alignment
+        self._allow_overlap = tdata_ref._allow_overlap
+
         # view of obst and vart
         self._obst = tdata_ref.obst._view(self, oidx)
         self._vart = tdata_ref.vart._view(self, vidx)
 
-        # set attributes
-        self._tree_label = tdata_ref._tree_label
-        self._allow_overlap = tdata_ref._allow_overlap
+        # actualize if not a valid subset
+        for attr in ["obst", "vart"]:
+            if not getattr(self, attr)._validate_mapping():
+                warnings.warn(
+                    f"One or more trees in `{attr}` are not disconnected by subsetting. Changing alignment to `subset` and initializing view as actual.",
+                    stacklevel=2,
+                )
+                self._alignment = "subset"
+                new = self.copy()
+                self._init_as_actual(new)
+                break
 
     def obst_keys(self) -> list[str]:
         """List keys of variable annotation `obst`."""
@@ -204,7 +232,7 @@ class TreeData(ad.AnnData):
 
         Stores for each key a :class:`~networkx.DiGraph` with leaf nodes in
         :attr:`obs_names`. Is subset and pruned with `data` but behaves
-        otherwise like a :term:`mapping`.
+        otherwise like a :term:`alignment`.
         """
         return self._obst
 
@@ -214,7 +242,7 @@ class TreeData(ad.AnnData):
 
         Stores for each key a :class:`~networkx.DiGraph` with leaf nodes in
         :attr:`var_names`. Is subset and pruned with `data` but behaves
-        otherwise like a :term:`mapping`.
+        otherwise like a :term:`alignment`.
         """
         return self._vart
 
@@ -222,6 +250,11 @@ class TreeData(ad.AnnData):
     def allow_overlap(self) -> bool:
         """Whether overlapping trees are allowed."""
         return self._allow_overlap
+
+    @property
+    def alignment(self) -> Literal["leaves", "nodes", "subset"]:
+        """Mapping between trees and observations/variables."""
+        return self._alignment  # type: ignore
 
     @property
     def label(self) -> str | None:
@@ -242,6 +275,29 @@ class TreeData(ad.AnnData):
     def vart(self, value):
         vart = AxisTrees(self, 1, vals=dict(value))
         self._vart = vart
+
+    @allow_overlap.setter
+    def allow_overlap(self, value):
+        if not isinstance(value, bool):
+            raise ValueError("allow_overlap has to be a boolean")
+        if not value:
+            for attr in ["obst", "vart"]:
+                if getattr(self, attr)._check_tree_overlap():
+                    raise ValueError(
+                        f"One or more trees in {attr} have overlapping nodes. Cannot set allow_overlap to False."
+                    )
+        self._allow_overlap = value
+
+    @alignment.setter
+    def alignment(self, value):
+        if value not in ["leaves", "nodes", "subset"]:
+            raise ValueError("alignment has to be one of ['leaves', 'nodes', 'subset']")
+        previous = self._alignment
+        self._alignment = value
+        for attr in ["obst", "vart"]:
+            if not getattr(self, attr)._validate_mapping():
+                self._alignment = previous
+                raise ValueError(f"One or more trees in `{attr}` cannot be transitioned to {value} alignment.")
 
     def _gen_repr(self, n_obs, n_vars) -> str:
         if self.isbacked:
@@ -285,6 +341,7 @@ class TreeData(ad.AnnData):
         new = {}
         new["label"] = self.label
         new["allow_overlap"] = self.allow_overlap
+        new["alignment"] = self.alignment
 
         for key in ["obs", "var", "obsm", "varm", "obsp", "varp", "obst", "vart", "layers"]:
             if key in kwargs:
@@ -339,6 +396,7 @@ class TreeData(ad.AnnData):
             vart=self.obst.copy(),
             label=self.label,
             allow_overlap=self.allow_overlap,
+            alignment=self.alignment,
         )
         return treedata_transpose
 
@@ -410,5 +468,6 @@ class TreeData(ad.AnnData):
             vart=self.vart.copy(),
             label=self.label,
             allow_overlap=self.allow_overlap,
+            alignment=self.alignment,
         )
         return tdata

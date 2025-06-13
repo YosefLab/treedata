@@ -74,7 +74,7 @@ def _write_tdata(f, tdata, filename, **kwargs) -> None:
     if not (tdata.isbacked and Path(tdata.filename) == Path(filename)):
         _write_elem(f, "X", tdata.X, dataset_kwargs=kwargs)
     # Write array elements
-    for key in ["obs", "var", "label", "allow_overlap"]:
+    for key in ["obs", "var", "label", "allow_overlap", "alignment"]:
         _write_elem(f, key, getattr(tdata, key), dataset_kwargs=kwargs)
     # Write group elements
     for key in ["obsm", "varm", "obsp", "varp", "layers", "uns"]:

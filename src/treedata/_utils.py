@@ -4,19 +4,26 @@ from typing import Literal
 import networkx as nx
 
 
-def subset_tree(tree: nx.DiGraph, leaves: list[str | int] | set[str | int], asview: bool) -> nx.DiGraph:
+def subset_tree(
+    tree: nx.DiGraph, nodes: list[str | int] | set[str | int], asview: bool, alignment: str = "leaves"
+) -> nx.DiGraph:
     """Subset tree."""
-    keep_nodes = set(leaves)
-    nodes_to_check = deque()
-    for node in leaves:
-        nodes_to_check.extend(tree.predecessors(node))
-    while nodes_to_check:
-        node = nodes_to_check.popleft()
-        if node in keep_nodes:
-            continue
-        else:
-            keep_nodes.add(node)
+    keep_nodes = set(nodes)
+    # if leaves add all ancestors to keep_nodes
+    if alignment == "leaves":
+        nodes_to_check = deque()
+        for node in nodes:
             nodes_to_check.extend(tree.predecessors(node))
+        while nodes_to_check:
+            node = nodes_to_check.popleft()
+            if node in keep_nodes:
+                continue
+            else:
+                keep_nodes.add(node)
+                nodes_to_check.extend(tree.predecessors(node))
+    subgraph = tree.subgraph(keep_nodes)
+    if len(keep_nodes) > 0 and not nx.is_tree(subgraph):
+        raise ValueError("Subset is not a tree. Please check your input.")
     if asview:
         return tree.subgraph(keep_nodes)
     else:

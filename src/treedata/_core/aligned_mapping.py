@@ -33,8 +33,8 @@ class AxisTreesBase(cabc.MutableMapping):
     @abstractmethod
     def __init__(self):
         """Abstract constructor."""
-        self._tree_to_leaf = defaultdict(set)
-        self._leaf_to_tree = defaultdict(set)
+        self._tree_to_node = defaultdict(set)
+        self._node_to_tree = defaultdict(set)
         self._axis = 0
         self._parent = None
         self._dimnames = ("obs", "var")
@@ -47,54 +47,57 @@ class AxisTreesBase(cabc.MutableMapping):
         """IPython key completions."""
         return list(self.keys())
 
-    def _validate_tree(self, tree: nx.DiGraph, key: str) -> tuple[nx.DiGraph, set]:
+    def _validate_tree(self, tree: nx.DiGraph, key: str) -> set[str]:
         """Validate that graph is a tree and check for overlaps."""
         # Check value type
         if not isinstance(tree, nx.DiGraph):
             raise ValueError(f"Value for key {key} must be a nx.DiGraph")
         # Empty tree
         if tree.number_of_nodes() == 0:
-            return tree, set()
-        # Check tree
-        if tree.number_of_nodes() != tree.number_of_edges() + 1:
-            raise ValueError(f"Value for key {key} must be a tree")
-        root_count = 0
-        leaves = set()
-        for node in tree.nodes:
-            if tree.in_degree(node) == 0:
-                root_count += 1
-                if tree.out_degree(node) == 0:
-                    raise ValueError(f"Value for key {key} must be fully connected")
-            elif tree.in_degree(node) > 1:
-                raise ValueError(f"Value for key {key} must be a tree")
-            if tree.out_degree(node) == 0:
-                leaves.add(node)
-        if root_count != 1:
+            return set()
+        # Check tree topology
+        if not nx.is_tree(tree):
             raise ValueError(f"Value for key {key} must be a tree")
         # Check alignment
-        if not leaves.issubset(self.dim_names):
-            raise ValueError(f"Leaf names in must be in {self.dim}_names")
+        nodes = set(tree.nodes)
+        if self.parent.alignment == "leaves":
+            nodes = {node for node in nodes if tree.out_degree(node) == 0}
+        if self.parent.alignment in ["leaves", "nodes"]:
+            if not nodes.issubset(self.dim_names):
+                raise ValueError(
+                    f"Names of {self.parent.alignment} must be in {self.dim}_names when alignment='{self.parent.alignment}'"
+                )
         # Check overlap
         if not self.parent.allow_overlap:
-            if key in self._tree_to_leaf:
-                new_leaves = leaves.difference(self._tree_to_leaf[key])
+            if key in self._tree_to_node:
+                new_nodes = nodes.difference(self._tree_to_node[key])
             else:
-                new_leaves = leaves
-            if new_leaves.intersection(self._leaf_to_tree.keys()):
+                new_nodes = nodes
+            if self._check_tree_overlap(new_nodes):
                 raise ValueError(
                     "Leaf names overlap with leaf names of other trees. Set `allow_overlap=True` to allow this."
                 )
-        return tree, leaves
+        return nodes
+
+    def _check_tree_overlap(self, nodes=()) -> bool:
+        """Check if the leaves overlap with other trees."""
+        nodes = set(nodes)
+        for _, tree_nodes in self._tree_to_node.items():
+            if nodes.intersection(tree_nodes):
+                return True
+            else:
+                nodes = nodes.union(tree_nodes)
+        return False
 
     def _update_tree_labels(self):
         """Update the tree labels in the parent object."""
         if self.parent._tree_label is not None:
             if self.parent.allow_overlap:
-                mapping = {k: ",".join(map(str, sorted(v))) for k, v in self._leaf_to_tree.items()}
+                labels = {k: ",".join(map(str, sorted(v))) for k, v in self._node_to_tree.items()}
             else:
-                mapping = {k: next(iter(v)) for k, v in self._leaf_to_tree.items()}
+                labels = {k: next(iter(v)) for k, v in self._node_to_tree.items()}
             getattr(self.parent, self.dim)[self.parent._tree_label] = getattr(self.parent, f"{self.dim}_names").map(
-                mapping
+                labels
             )
 
     def _check_uniqueness(self):
@@ -159,8 +162,8 @@ class AxisTrees(AxisTreesBase):
             raise ValueError()
         self._axis = axis
         self._data = {}
-        self._tree_to_leaf = defaultdict(set)
-        self._leaf_to_tree = defaultdict(set)
+        self._tree_to_node = defaultdict(set)
+        self._node_to_tree = defaultdict(set)
         if vals is not None:
             self.update(vals)
 
@@ -171,11 +174,11 @@ class AxisTrees(AxisTreesBase):
     def __setitem__(self, key: str, value: nx.DiGraph):
         """Set item in the mapping."""
         self._check_uniqueness()
-        value, leaves = self._validate_tree(value, key)
+        nodes = self._validate_tree(value, key)
 
-        for leaf in leaves:
-            self._leaf_to_tree[leaf].add(key)
-        self._tree_to_leaf[key] = leaves
+        for node in nodes:
+            self._node_to_tree[node].add(key)
+        self._tree_to_node[key] = nodes
 
         if not self.parent.is_view:
             self._update_tree_labels()
@@ -184,11 +187,11 @@ class AxisTrees(AxisTreesBase):
 
     def __delitem__(self, key: str):
         """Delete item from the mapping."""
-        for leaf in self._tree_to_leaf[key]:
-            self._leaf_to_tree[leaf].remove(key)
-            if not self._leaf_to_tree[leaf]:
-                del self._leaf_to_tree[leaf]
-        del self._tree_to_leaf[key]
+        for leaf in self._tree_to_node[key]:
+            self._node_to_tree[leaf].remove(key)
+            if not self._node_to_tree[leaf]:
+                del self._node_to_tree[leaf]
+        del self._tree_to_node[key]
 
         self._update_tree_labels()
 
@@ -206,34 +209,49 @@ class AxisTrees(AxisTreesBase):
         """Iterate over the keys of the mapping."""
         return iter(self._data)
 
+    def _validate_mapping(self) -> bool:
+        """Check that the mapping is valid."""
+        if self.parent.alignment in ["subset"]:
+            return True
+        for key, value in self.items():
+            try:
+                self._validate_tree(value, key)
+            except ValueError:
+                return False
+        return True
+
 
 class AxisTreesView(AxisTreesBase):
     """View of AxisTree object."""
 
     def __init__(
         self,
-        parent_mapping: AxisTreesBase,
+        parent_trees: AxisTreesBase,
         parent_view: TreeData,
         subset_idx: Index1D | None,
     ):
-        self.parent_mapping = parent_mapping
+        self.parent_trees = parent_trees
         self._parent = parent_view
         self._dimnames = ("obs", "var")
         self.subset_idx = subset_idx
-        self._axis = parent_mapping._axis
-        self._tree_to_leaf = parent_mapping._tree_to_leaf
-        self._leaf_to_tree = parent_mapping._leaf_to_tree
+        self._axis = parent_trees._axis
+        self._tree_to_node = parent_trees._tree_to_node
+        self._node_to_tree = parent_trees._node_to_tree
 
     def __getitem__(self, key: str) -> nx.DiGraph:
         """Get item from the mapping."""
-        leaves = self.parent_mapping._tree_to_leaf[key]
-        subset_leaves = leaves.intersection(self.dim_names.values)
-        return subset_tree(self.parent_mapping[key], subset_leaves, asview=True)
+        if self.parent.alignment in ["leaves", "nodes"]:
+            nodes = self.parent_trees._tree_to_node[key]
+            subset_nodes = nodes.intersection(self.dim_names.values)
+            tree_view = subset_tree(self.parent_trees[key], subset_nodes, asview=True, alignment=self.parent.alignment)
+        else:
+            tree_view = nx.graphviews.generic_graph_view(self.parent_trees[key])
+        return tree_view
 
     def __setitem__(self, key: str, value: nx.DiGraph):
         """Set item in the mapping."""
         self._check_uniqueness()
-        value, _ = self._validate_tree(value, key)  # Validate before mutating
+        self._validate_tree(value, key)
         warnings.warn(
             f"Setting element `.{self.attrname}['{key}']` of view, initializing view as actual.", stacklevel=2
         )
@@ -254,19 +272,30 @@ class AxisTreesView(AxisTreesBase):
 
     def __iter__(self) -> Iterator[str]:
         """Iterate over the keys of the mapping."""
-        return iter(self.parent_mapping)
+        return iter(self.parent_trees)
 
     def __contains__(self, key: str) -> bool:
         """Check if the mapping contains a key."""
-        return key in self.parent_mapping
+        return key in self.parent_trees
 
     def __len__(self) -> int:
         """Get length of the mapping."""
-        return len(self.parent_mapping)
+        return len(self.parent_trees)
+
+    def _validate_mapping(self) -> bool:
+        """Check that the mapping is valid."""
+        if self.parent.alignment in ["leaves", "subset"]:
+            return True
+        for key in self.keys():
+            try:
+                self[key]
+            except ValueError:
+                return False
+        return True
 
 
 @contextmanager
-def view_update(tdata_view: TreeData, attr_name: str, keys: tuple[str, ...]):
+def view_update(tdata_view: TreeData, attr_name: str, keys: tuple[str, ...]) -> Iterator:
     """Context manager for updating a view of an TreeData object.
 
     Contains logic for "actualizing" a view. Yields the object to be modified in-place.

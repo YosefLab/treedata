@@ -46,6 +46,7 @@ def test_h5ad_readwrite(tdata, tmp_path, backed):
     check_graph_equality(tdata2.vart["1"], tdata.vart["1"])
     assert tdata2.label == "tree"
     assert tdata2.allow_overlap is True
+    assert tdata2.alignment == "leaves"
     assert tdata2.obst["1"].nodes["root"]["depth"] == 0
     assert tdata2.obst["2"].nodes["root"]["characters"] == ["-1", "1"]
     assert tdata2.obs.loc["0", "tree"] == "1,2"
@@ -87,6 +88,7 @@ def test_zarr_readwrite(tdata, tmp_path):
     check_graph_equality(tdata2.vart["1"], tdata.vart["1"])
     assert tdata2.label == "tree"
     assert tdata2.allow_overlap is True
+    assert tdata2.alignment == "leaves"
     assert tdata2.obst["2"].nodes["root"]["depth"] == 0
     assert tdata2.obs.loc["0", "tree"] == "1,2"
 
@@ -99,6 +101,7 @@ def test_read_anndata(X, tmp_path):
     assert np.array_equal(tdata.X, adata.X)
     assert tdata.label == "tree"
     assert tdata.allow_overlap is False
+    assert tdata.alignment == "leaves"
     assert tdata.obst_keys() == []
 
 

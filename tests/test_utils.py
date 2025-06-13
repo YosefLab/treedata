@@ -34,3 +34,24 @@ def test_subset_tree(tree):
     assert list(subtree.edges) == expected_edges
     assert tree.nodes[9]["depth"] == "new_value"
     assert subtree.nodes[9]["depth"] == "new_value"
+
+
+def test_subset_tree_nodes(tree):
+    # include root
+    subtree = subset_tree(tree, [0, 1, 2, 3], asview=False, alignment="nodes")
+    expected_edges = [
+        (0, 1),
+        (0, 2),
+        (1, 3),
+    ]
+    assert list(subtree.edges) == expected_edges
+    # exclude root
+    subtree = subset_tree(tree, [1, 3, 4], asview=False, alignment="nodes")
+    expected_edges = [
+        (1, 3),
+        (1, 4),
+    ]
+    assert list(subtree.edges) == expected_edges
+    # invalid
+    with pytest.raises(ValueError):
+        subset_tree(tree, [7, 8, 9], asview=False, alignment="nodes")

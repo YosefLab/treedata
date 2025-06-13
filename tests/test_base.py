@@ -31,7 +31,6 @@ def check_graph_equality(g1, g2):
 def test_creation(X, adata, tree):
     # Test creation with np array
     tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, label=None)
-    print(type(tdata))
     check_graph_equality(tdata.obst["tree"], tree)
     check_graph_equality(tdata.vart["tree"], tree)
     # Test creation with anndata
@@ -73,7 +72,7 @@ def test_tree_contains(X, tree, dim):
     assert "not_tree" not in getattr(tdata, f"{dim}t")
 
 
-@pytest.mark.filterwarnings
+@pytest.mark.filterwarnings  # type: ignore
 @pytest.mark.parametrize("dim", ["obs", "var"])
 def test_tree_label(X, tree, dim):
     # Test tree label
@@ -104,6 +103,41 @@ def test_tree_overlap(X, tree):
     tdata = td.TreeData(X, obst={"0": tree, "1": second_tree}, allow_overlap=True)
     check_graph_equality(tdata.obst["0"], tree)
     check_graph_equality(tdata.obst["1"], second_tree)
+    # Test set allow_overlap to True
+    tdata = td.TreeData(X, obst={"0": tree}, allow_overlap=False)
+    assert tdata.allow_overlap is False
+    tdata.allow_overlap = True
+    tdata.obst["1"] = tree
+    assert list(tdata.obst.keys()) == ["0", "1"]
+    assert tdata.allow_overlap
+    # Cannot set allow_overlap to False when overlap is present
+    with pytest.raises(ValueError):
+        tdata.allow_overlap = False
+    assert tdata.allow_overlap
+
+
+def test_alignment(X, tree):
+    # Test node alignment
+    X = pd.DataFrame(X, index=["root", "0", "1"], columns=["root", "0", "1"])
+    tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, alignment="nodes")
+    assert tdata.alignment == "nodes"
+    # Test transition to subset
+    tdata.alignment = "subset"
+    assert tdata.alignment == "subset"
+    # Test invalid node alignment
+    with pytest.raises(ValueError):
+        tdata = td.TreeData(obs=pd.DataFrame(index=["0", "1"]), obst={"tree": tree}, alignment="nodes")
+    # Test subset alignment
+    X = pd.DataFrame(X, index=["1", "2", "3"], columns=["1", "2", "3"])
+    tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, alignment="subset")
+    assert tdata.alignment == "subset"
+    # Test invalid alignment transitions
+    with pytest.raises(ValueError):
+        tdata.alignment = "nodes"
+    assert tdata.alignment == "subset"
+    with pytest.raises(ValueError):
+        tdata.alignment = "leaves"
+    assert tdata.alignment == "subset"
 
 
 def test_repr(X, tree):
@@ -119,7 +153,7 @@ def test_repr(X, tree):
 
 
 def test_mutability(X, tree):
-    tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, label=None)
+    tdata = td.TreeData(X, obst={"tree": tree}, vart={"tree": tree}, label=None, allow_overlap=False)
     # Toplogy is immutable
     with pytest.raises(nx.NetworkXError):
         tdata.obst["tree"].remove_node("0")
@@ -129,15 +163,23 @@ def test_mutability(X, tree):
     # Topology mutable on copy
     tree = tdata.obst["tree"].copy()
     tree.remove_node("1")
-    tdata.obst["tree"] = tree
+    tdata.obst["tree"] = tree  # type: ignore
     assert list(tdata.obst["tree"].nodes) == ["root", "0"]
+
+
+def test_bad_alignment(tree):
+    obs = pd.DataFrame(index=["1", "bad"])
+    with pytest.raises(ValueError):
+        _ = td.TreeData(obs=obs, obst={"tree": tree}, alignment="leaves")
+    with pytest.raises(ValueError):
+        _ = td.TreeData(obs=obs, obst={"tree": tree}, alignment="nodes")
 
 
 def test_bad_tree(X):
     # Not directed graph
     not_di_graph = nx.Graph()
     with pytest.raises(ValueError):
-        _ = td.TreeData(X, obst={"tree": not_di_graph})
+        _ = td.TreeData(X, obst={"tree": not_di_graph})  # type: ignore
     # Has cycle
     has_cycle = nx.DiGraph()
     has_cycle.add_edges_from([("0", "1"), ("1", "0")])
@@ -195,3 +237,7 @@ def test_not_unique(X, tree, dim):
     with pytest.warns(UserWarning):
         setattr(tdata, f"{dim}t", {"tree": tree})
     assert getattr(tdata, f"{dim}_names").is_unique
+
+
+if __name__ == "__main__":
+    pytest.main(["-v", __file__])

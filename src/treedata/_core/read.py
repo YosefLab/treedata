@@ -81,7 +81,7 @@ def _read_tdata(f, filename, backed) -> dict:
     else:
         d.update({"filename": filename, "filemode": backed})
     # Read standard elements
-    for k in ["obs", "var", "obsm", "varm", "obsp", "varp", "layers", "uns", "label", "allow_overlap"]:
+    for k in ["obs", "var", "obsm", "varm", "obsp", "varp", "layers", "uns", "label", "allow_overlap", "alignment"]:
         if k in f:
             d[k] = _read_elem(f[k])
     # Read raw
