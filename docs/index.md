@@ -12,6 +12,8 @@ api.md
 
 notebooks/concatenation
 
+notebooks/alignment
+
 changelog.md
 contributing.md
 references.md

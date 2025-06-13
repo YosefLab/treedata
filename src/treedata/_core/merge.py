@@ -9,7 +9,6 @@ from functools import reduce
 from typing import Any, Literal
 
 import anndata as ad
-import networkx as nx
 import pandas as pd
 from anndata._core.merge import resolve_merge_strategy
 
@@ -124,18 +123,28 @@ def concat(
     tdata = TreeData(adata, allow_overlap=allow_overlap, label=label, alignment=alignment)
 
     # Trees for concatenation axis
+    merge_function = resolve_merge_strategy(merge)
     concat_trees = [getattr(t, f"{dim}t") for t in tdatas]
     unique_keys = {key for alignment in concat_trees for key in alignment.keys()}
+    merged_keys = []
     for key in unique_keys:
         trees = [alignment[key] for alignment in concat_trees if key in alignment]
-        if alignment != "leaves" and not all(nx.utils.graphs_equal(trees[0], tree) for tree in trees):
-            warnings.warn(f"Dropping `obst` key {key} due to inconsistent values.", stacklevel=2)
+        if alignment != "leaves" and len(trees) > 1:
+            merged_keys.append(key)
+            merged = merge_function([{key: t} for t in trees])
+            if key in merged:
+                getattr(tdata, f"{dim}t")[key] = merged[key]
         else:
             tree = combine_trees(trees)
             getattr(tdata, f"{dim}t")[key] = tree
+    if len(merged_keys) > 0:
+        warnings.warn(
+            f"Multiple values found for {dim}t keys: {', '.join(str(k) for k in merged_keys)}. "
+            f"Merging with strategy `{merge}`.",
+            stacklevel=2,
+        )
 
     # Trees for other axis
-    merge_function = resolve_merge_strategy(merge)
     if join == "inner" and alt_axis == 0:
         tdatas = [t[alt_indices, :] for t in tdatas]
     elif join == "inner" and alt_axis == 1:

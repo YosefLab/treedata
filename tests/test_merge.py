@@ -113,6 +113,7 @@ def test_node_alignment(nodes_tdata):
     with pytest.warns(UserWarning):
         tdata = td.concat([tdata1, tdata2], axis=0, join="outer", merge="same")
     assert tdata.shape == (15, 15)
+    print(tdata)
     assert tdata.alignment == "nodes"
     assert list(tdata.obst.keys()) == []
     assert list(tdata.vart.keys()) == ["tree"]
@@ -135,7 +136,8 @@ def test_subset_alignment(nodes_tdata):
     assert tdata1.alignment == "subset"
     assert tdata2.alignment == "subset"
     # concat same obst key
-    tdata = td.concat([tdata1, tdata2], axis=0, join="outer", merge="same")
+    with pytest.warns(UserWarning):
+        tdata = td.concat([tdata1, tdata2], axis=0, join="outer", merge="same")
     assert tdata.shape == (15, 15)
     assert tdata.alignment == "subset"
     assert list(tdata.obst.keys()) == ["tree"]

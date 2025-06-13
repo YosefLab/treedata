@@ -69,6 +69,7 @@ class TreeData(ad.AnnData):
         If it's None, no column is added.
     alignment
         Alignment between trees and observations/variables. One of the following:
+
         - `leaves`: All leaf names are present in the observation/variable names.
         - `nodes`: All leaf and internal node names are present in the observation/variable names.
         - `subset`: A subset of leaf and internal node names are present in the observation/variable names.
