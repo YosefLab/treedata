@@ -35,11 +35,11 @@ def check_graph_equality(g1, g2):
 
 
 @pytest.mark.parametrize("backed", [None, "r"])
-def test_h5ad_readwrite(tdata, tmp_path, backed):
+def test_h5td_readwrite(tdata, tmp_path, backed):
     tdata.raw = tdata
-    file_path = tmp_path / "test.h5ad"
-    tdata.write_h5ad(file_path)
-    tdata2 = td.read_h5ad(file_path, backed=backed)
+    file_path = tmp_path / "test.h5td"
+    tdata.write_h5td(file_path)
+    tdata2 = td.read_h5td(file_path, backed=backed)
     assert np.array_equal(tdata2.X, tdata.X)
     assert np.array_equal(tdata2.raw.X, tdata.raw.X)
     check_graph_equality(tdata2.obst["1"], tdata.obst["1"])
@@ -56,16 +56,16 @@ def test_h5ad_readwrite(tdata, tmp_path, backed):
         assert tdata2.filename == file_path
 
 
-def test_h5ad_dtypes(tdata, tmp_path):
-    file_path = tmp_path / "test.h5ad"
+def test_h5td_dtypes(tdata, tmp_path):
+    file_path = tmp_path / "test.h5td"
     tdata.obst["1"].nodes["root"]["list"] = [1, 2, 3]
     tdata.obst["1"].nodes["root"]["tuple"] = (1, 2, 3)
     tdata.obst["1"].nodes["root"]["set"] = {1, 2, 3}
     tdata.obst["1"].nodes["root"]["np_float"] = np.float64(1.0)
     tdata.obst["1"].nodes["root"]["np_array"] = np.array([[1, 2], [3, 4]])
     tdata.obst["1"].nodes["root"]["pd_series"] = pd.Series(["1", "2", "3"])
-    tdata.write_h5ad(file_path)
-    tdata2 = td.read_h5ad(file_path)
+    tdata.write_h5td(file_path)
+    tdata2 = td.read_h5td(file_path)
     assert tdata2.obst["1"].nodes["root"]["list"] == [1, 2, 3]
     assert isinstance(tdata2.obst["1"].nodes["root"]["list"], list)
     assert tdata2.obst["1"].nodes["root"]["tuple"] == [1, 2, 3]
@@ -97,7 +97,7 @@ def test_read_anndata(X, tmp_path):
     adata = ad.AnnData(X)
     file_path = tmp_path / "test.h5ad"
     adata.write_h5ad(file_path)
-    tdata = td.read_h5ad(file_path)
+    tdata = td.read_h5td(file_path)
     assert np.array_equal(tdata.X, adata.X)
     assert tdata.label == "tree"
     assert tdata.allow_overlap is False
@@ -107,17 +107,26 @@ def test_read_anndata(X, tmp_path):
 
 def test_read_no_X(X, tmp_path):
     tdata = td.TreeData(obs=pd.DataFrame(index=["0", "1", "2"]))
-    file_path = tmp_path / "test.h5ad"
-    tdata.write_h5ad(file_path)
-    tdata2 = td.read_h5ad(file_path)
+    file_path = tmp_path / "test.h5td"
+    tdata.write_h5td(file_path)
+    tdata2 = td.read_h5td(file_path)
     assert tdata2.X is None
 
 
-def test_h5ad_backing(tdata, tree, tmp_path):
+def deprecated_read_write(tdata, tmp_path):
+    # Test deprecated read/write methods
+    file_path = tmp_path / "test_deprecated.h5td"
+    with pytest.warns(DeprecationWarning):
+        tdata.write_h5ad(file_path)
+    with pytest.warns(DeprecationWarning):
+        td.read_h5ad(file_path)
+
+
+def test_h5td_backing(tdata, tree, tmp_path):
     tdata_copy = tdata.copy()
     assert not tdata.isbacked
-    backing_h5ad = tmp_path / "test_backed.h5ad"
-    tdata.filename = backing_h5ad
+    backing_h5td = tmp_path / "test_backed.h5td"
+    tdata.filename = backing_h5td
     # backing mode
     tdata.write()
     assert not tdata.file.is_open
@@ -137,7 +146,7 @@ def test_h5ad_backing(tdata, tree, tmp_path):
     assert subset_hash == joblib.hash(tdata_subset)
     assert tdata_subset.is_view
     # copy
-    tdata_subset = tdata_subset.copy(tmp_path / "test_subset.h5ad")
+    tdata_subset = tdata_subset.copy(tmp_path / "test_subset.h5td")
     assert not tdata_subset.is_view
     tdata_subset.obs["foo"] = range(3)
     assert not tdata_subset.is_view

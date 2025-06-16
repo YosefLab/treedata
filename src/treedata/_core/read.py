@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, Literal
 
@@ -97,18 +98,18 @@ def _read_tdata(f, filename, backed) -> dict:
     return d
 
 
-def read_h5ad(
+def read_h5td(
     filename: str | PathLike | None = None,
     backed: Literal["r", "r+"] | bool | None = None,
 ) -> TreeData:
-    """Read `.h5ad`-formatted hdf5 file.
+    """Read `.h5td` or `.h5ad`-formatted hdf5 file.
 
     Parameters
     ----------
     filename
         File name of data file.
     backed
-        If `'r'`, load :class:`~anndata.TreeData` in `backed` mode
+        If `'r'`, load :class:`~TreeData` in `backed` mode
         instead of fully loading it into memory (`memory` mode).
         If you want to modify backed attributes of the TreeData object,
         you need to choose `'r+'`.
@@ -116,6 +117,30 @@ def read_h5ad(
     with h5py.File(filename, "r") as f:
         d = _read_tdata(f, filename, backed)
     return TreeData(**d)
+
+
+def read_h5ad(
+    filename: str | PathLike | None = None,
+    backed: Literal["r", "r+"] | bool | None = None,
+) -> TreeData:
+    """Read `.h5td` or `.h5ad`-formatted hdf5 file. Deprecated, use `read_h5td` instead.
+
+    Parameters
+    ----------
+    filename
+        File name of data file.
+    backed
+        If `'r'`, load :class:`~TreeData` in `backed` mode
+        instead of fully loading it into memory (`memory` mode).
+        If you want to modify backed attributes of the TreeData object,
+        you need to choose `'r+'`.
+    """
+    warnings.warn(
+        "read_h5ad has been renamed to read_h5td. read_h5ad will be removed in v1.0.0.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return read_h5td(filename, backed=backed)
 
 
 def read_zarr(store: str | PathLike | MutableMapping | zarr.Group) -> TreeData:
