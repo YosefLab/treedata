@@ -16,6 +16,20 @@ and this project adheres to [Semantic Versioning][].
 
 ### Fixed
 
+## [0.2.0] - 2025-06-16
+
+### Added
+
+- `alignment` parameter which allows for `obs_names` and `var_names` aligned to either the leaves, nodes, or a subset of leaves and nodes in trees stored in the `obst` and `vart` fields. Added a tutorial describing how `alignment` works (#55)
+
+### Changed
+
+- `read_h5ad` and `write_h5ad` and been renamed `read_h5td` and `write_h5td` to clarify that the `treedata` format differs from `anndata`. `read_h5ad` and `write_h5ad` will be removed in `v1.0.0` (#56)
+
+### Fixed
+
+- Fixed typing issues (#51)
+
 ## [0.1.3] - 2025-01-20
 
 ### Added
@@ -23,6 +37,8 @@ and this project adheres to [Semantic Versioning][].
 ### Changed
 
 ### Fixed
+
+- Fixed typing issues (#51)
 
 - Fixed `ImportError: zarr-python major version > 2 is not supported'` error with Python 12 (#46)
 
