@@ -371,17 +371,17 @@ class TreeData(ad.AnnData):
             else:
                 return self._mutated_copy()
         else:
-            from .read import read_h5ad
+            from .read import read_h5td
 
             if filename is None:
                 raise ValueError(
                     "To copy an TreeData object in backed mode, "
-                    "pass a filename: `.copy(filename='myfilename.h5ad')`. "
+                    "pass a filename: `.copy(filename='myfilename.h5td')`. "
                     "To load the object into memory, use `.to_memory()`."
                 )
             mode = self.file._filemode
-            self.write_h5ad(filename)
-            return read_h5ad(filename, backed=mode)
+            self.write_h5td(filename)
+            return read_h5td(filename, backed=mode)
 
     def transpose(self) -> TreeData:
         """Transpose whole object
@@ -402,14 +402,14 @@ class TreeData(ad.AnnData):
 
     T = property(transpose)
 
-    def write_h5ad(
+    def write_h5td(
         self,
         filename: PathLike | None = None,
         compression: Literal["gzip", "lzf"] | None = None,
         compression_opts: int | Any = None,
         **kwargs,
     ):
-        """Write `.h5ad`-formatted hdf5 file.
+        """Write `.h5td`-formatted hdf5 file.
 
         Parameters
         ----------
@@ -420,19 +420,19 @@ class TreeData(ad.AnnData):
         compression_opts
             [`lzf`, `gzip`], see the h5py :ref:`dataset_compression`.
         """
-        from .write import write_h5ad
+        from .write import write_h5td
 
         if filename is None and not self.isbacked:
             raise ValueError("Provide a filename!")
         if filename is None:
             filename = self.filename
 
-        write_h5ad(filename, self, compression=compression, compression_opts=compression_opts)
+        write_h5td(filename, self, compression=compression, compression_opts=compression_opts)
 
         if self.isbacked:
             self.file.filename = filename
 
-    write = write_h5ad  # a shortcut and backwards compat
+    write = write_h5td  # a shortcut and backwards compat
 
     def write_zarr(
         self,

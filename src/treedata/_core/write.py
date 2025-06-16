@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from collections.abc import MutableMapping
 from os import PathLike
 from pathlib import Path
@@ -66,7 +67,7 @@ def _write_tdata(f, tdata, filename, **kwargs) -> None:
     """Write TreeData to file."""
     # Add encoding type and version
     f = f["/"]
-    f.attrs.setdefault("encoding-type", "anndata")
+    f.attrs.setdefault("encoding-type", "treedata")
     f.attrs.setdefault("encoding-version", "0.1.0")
     # Convert strings to categoricals
     tdata.strings_to_categoricals()
@@ -90,14 +91,14 @@ def _write_tdata(f, tdata, filename, **kwargs) -> None:
     tdata.file.close()
 
 
-def write_h5ad(
+def write_h5td(
     filename: PathLike | None,
     tdata: TreeData,
     compression: Literal["gzip", "lzf"] | None = None,
     compression_opts: int | Any = None,
     **kwargs,
 ) -> None:
-    """Write `.h5ad`-formatted hdf5 file.
+    """Write `.h5td`-formatted hdf5 file.
 
     Parameters
     ----------
@@ -115,6 +116,40 @@ def write_h5ad(
         tdata.file.close()
     with h5py.File(filename, mode) as f:
         _write_tdata(f, tdata, filename, compression=compression, compression_opts=compression_opts, **kwargs)
+
+
+def write_h5ad(
+    filename: PathLike | None,
+    tdata: TreeData,
+    compression: Literal["gzip", "lzf"] | None = None,
+    compression_opts: int | Any = None,
+    **kwargs,
+) -> None:
+    """Write `.h5td`-formatted hdf5 file. Deprecated, use `write_h5td` instead.
+
+    Parameters
+    ----------
+    filename
+        Filename of data file. Defaults to backing file.
+    tdata
+        TreeData object to write.
+    compression
+        [`lzf`, `gzip`], see the h5py :ref:`dataset_compression`.
+    compression_opts
+        [`lzf`, `gzip`], see the h5py :ref:`dataset_compression`.
+    """
+    warnings.warn(
+        "write_h5ad has been renamed to write_h5td. write_h5ad will be removed in v1.0.0.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    write_h5td(
+        filename=filename,
+        tdata=tdata,
+        compression=compression,
+        compression_opts=compression_opts,
+        **kwargs,
+    )
 
 
 def write_zarr(filename: MutableMapping | PathLike, tdata: TreeData, **kwargs) -> None:

@@ -32,7 +32,7 @@ Reading TreeData objects:
 .. autosummary::
    :toctree: generated/
 
-   read_h5ad
+   read_h5td
    read_zarr
 ```
 
@@ -44,6 +44,6 @@ Writing TreeData objects:
 .. autosummary::
    :toctree: generated/
 
-   TreeData.write_h5ad
+   TreeData.write_h5td
    TreeData.write_zarr
 ```
