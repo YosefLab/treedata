@@ -16,6 +16,18 @@ and this project adheres to [Semantic Versioning][].
 
 ### Fixed
 
+## [0.2.1] - 2025-07-10
+
+### Added
+
+-  support for instantiating `TreeData` objects with only the tree structure (#56)
+
+### Changed
+
+- Updated docs to clarify all the ways `TreeData` can be instantiated (#56)
+
+### Fixed
+
 ## [0.2.0] - 2025-06-16
 
 ### Added

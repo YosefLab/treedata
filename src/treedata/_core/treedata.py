@@ -12,6 +12,8 @@ import pandas as pd
 from anndata._core.index import _subset
 from scipy import sparse
 
+from treedata._utils import _get_nodes
+
 from .aligned_mapping import AxisTrees, AxisTreesView
 
 if TYPE_CHECKING:
@@ -152,6 +154,12 @@ class TreeData(ad.AnnData):
         alignment=None,
         allow_overlap=None,
     ):
+        # init tree only
+        if X is None and obs is None and obst is not None:
+            obs = pd.DataFrame(index=_get_nodes(obst, alignment))
+        if X is None and var is None and vart is not None:
+            var = pd.DataFrame(index=_get_nodes(vart, alignment))
+
         super()._init_as_actual(
             X=X,
             obs=obs,

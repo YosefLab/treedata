@@ -1,5 +1,5 @@
 from collections import deque
-from typing import Literal
+from typing import Any, Literal
 
 import networkx as nx
 
@@ -53,3 +53,14 @@ def _resolve_axis(
     if axis in {1, "var"}:
         return (1, "var")
     raise ValueError(f"`axis` must be either 0, 1, 'obs', or 'var', was {axis}")
+
+
+def _get_nodes(trees: dict[str, nx.DiGraph], alignment: str | None) -> list[Any]:
+    """Get nodes from trees."""
+    nodes = set()
+    for _, tree in trees.items():
+        if alignment == "leaves":
+            nodes.update({node for node in tree.nodes() if tree.out_degree(node) == 0})
+        else:
+            nodes.update(tree.nodes())
+    return list(nodes)
