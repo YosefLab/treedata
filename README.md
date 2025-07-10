@@ -13,9 +13,9 @@
 
 # TreeData - AnnData with trees
 
-TreeData is a lightweight wrapper around AnnData which adds two additional attributes, `obst` and `vart`, to store [nx.DiGraph] trees for observations and variables. TreeData has the same interface as AnnData and is fully compatible with [scverse] packages like [scanpy].
+TreeData is a lightweight wrapper around AnnData which adds two additional attributes, `obst` and `vart`, to store [nx.DiGraph] trees for observations and variables. TreeData has the same interface as AnnData and is fully compatible with [scverse] packages like [Scanpy].
 
-To learn more about TreeData, please refer to the [documentation][link-docs] or checkout the [getting started guide][link-getting-started].
+To learn more about TreeData, please refer to the [documentation][link-docs] or checkout the [getting started guide][link-getting-started]. See the [Pycea documentation](https://pycea.readthedocs.io/) to learn how TreeData can be used to analyze single-cell lineage tracing data.
 
 ## Installation
 
@@ -49,7 +49,7 @@ For questions and bug reports please use the [issue tracker][issue-tracker].
 > t.b.a
 
 [scverse]: https://scverse.org/
-[scanpy]: https://scanpy.readthedocs.io/
+[Scanpy]: https://scanpy.readthedocs.io/
 [nx.DiGraph]: https://networkx.org/documentation/stable/reference/classes/digraph.html
 [scverse-discourse]: https://discourse.scverse.org/
 [issue-tracker]: https://github.com/YosefLab/treedata/issues
