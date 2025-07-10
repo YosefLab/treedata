@@ -36,6 +36,10 @@ def test_creation(X, adata, tree):
     # Test creation with anndata
     tdata = td.TreeData(adata)
     assert tdata.X is adata.X
+    # Test creating with tree only
+    tdata = td.TreeData(obst={"tree": tree}, vart={"tree": tree})
+    check_graph_equality(tdata.obst["tree"], tree)
+    check_graph_equality(tdata.vart["tree"], tree)
 
 
 @pytest.mark.parametrize("axis", [0, 1])
@@ -138,6 +142,9 @@ def test_alignment(X, tree):
     with pytest.raises(ValueError):
         tdata.alignment = "leaves"
     assert tdata.alignment == "subset"
+    # Instantiate tree only
+    tdata = td.TreeData(obst={"tree": tree}, alignment="nodes")
+    assert tdata.shape == (3, 0)
 
 
 def test_repr(X, tree):

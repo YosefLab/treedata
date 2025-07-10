@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "treedata"
-version = "0.2.0"
+version = "0.2.1"
 description = "anndata with trees"
 readme = "README.md"
 license = { file = "LICENSE" }
