@@ -184,6 +184,7 @@ class AxisTrees(AxisTreesBase):
             self._update_tree_labels()
 
         self._data[key] = value.copy()
+        self.parent._update_has_overlap()
 
     def __delitem__(self, key: str):
         """Delete item from the mapping."""
@@ -196,6 +197,7 @@ class AxisTrees(AxisTreesBase):
         self._update_tree_labels()
 
         del self._data[key]
+        self.parent._update_has_overlap()
 
     def __len__(self) -> int:
         """Get length of the mapping."""

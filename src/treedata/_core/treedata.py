@@ -184,6 +184,7 @@ class TreeData(ad.AnnData):
             self._obst = X.obst
             self._vart = X.vart
             self._alignment = X._alignment
+            self._has_overlap = X.has_overlap
 
         # init from scratch
         else:
@@ -199,8 +200,10 @@ class TreeData(ad.AnnData):
                 self._allow_overlap = bool(allow_overlap)
             else:
                 raise ValueError("allow_overlap has to be a boolean")
+            self._has_overlap = False
             self._obst = AxisTrees(self, 0, vals=obst)
             self._vart = AxisTrees(self, 1, vals=vart)
+            self._update_has_overlap()
 
     def _init_as_view(self, tdata_ref: TreeData, oidx: Index1D | None, vidx: Index1D | None):
         super()._init_as_view(tdata_ref, oidx=oidx, vidx=vidx)
@@ -209,6 +212,7 @@ class TreeData(ad.AnnData):
         self._tree_label = tdata_ref._tree_label
         self._alignment = tdata_ref._alignment
         self._allow_overlap = tdata_ref._allow_overlap
+        self._has_overlap = tdata_ref._has_overlap
 
         # view of obst and vart
         self._obst = tdata_ref.obst._view(self, oidx)
@@ -260,6 +264,17 @@ class TreeData(ad.AnnData):
         return self._allow_overlap
 
     @property
+    def has_overlap(self) -> bool:
+        """
+        Flag indicating whether stored trees contain overlapping nodes.
+
+        Returns
+        -------
+        bool - ``True`` when any stored trees share nodes, ``False`` otherwise.
+        """
+        return self._has_overlap
+
+    @property
     def alignment(self) -> Literal["leaves", "nodes", "subset"]:
         """Mapping between trees and observations/variables."""
         return self._alignment  # type: ignore
@@ -278,11 +293,13 @@ class TreeData(ad.AnnData):
     def obst(self, value):
         obst = AxisTrees(self, 0, vals=dict(value))
         self._obst = obst
+        self._update_has_overlap()
 
     @vart.setter
     def vart(self, value):
         vart = AxisTrees(self, 1, vals=dict(value))
         self._vart = vart
+        self._update_has_overlap()
 
     @allow_overlap.setter
     def allow_overlap(self, value):
@@ -295,6 +312,34 @@ class TreeData(ad.AnnData):
                         f"One or more trees in {attr} have overlapping nodes. Cannot set allow_overlap to False."
                     )
         self._allow_overlap = value
+        self._update_has_overlap()
+
+    def _update_has_overlap(self) -> None:
+        """
+        Update the cached overlap indicator.
+
+        Ensures the cached `_has_overlap` flag matches the current state of stored
+        trees.
+
+        Parameters
+        ----------
+        None
+            This method does not accept any parameters.
+
+        Returns
+        -------
+        None - This function updates the `_has_overlap` attribute in place.
+        """
+        if not self._allow_overlap:
+            self._has_overlap = False
+            return
+
+        has_overlap = False
+        if hasattr(self, "_obst"):
+            has_overlap = has_overlap or self._obst._check_tree_overlap()
+        if hasattr(self, "_vart"):
+            has_overlap = has_overlap or self._vart._check_tree_overlap()
+        self._has_overlap = has_overlap
 
     @alignment.setter
     def alignment(self, value):
