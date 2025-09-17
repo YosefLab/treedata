@@ -52,6 +52,7 @@ def test_attributes(X, tree, axis):
     assert getattr(tdata, f"{dim}t").parent is tdata
     assert list(getattr(tdata, f"{dim}t").dim_names) == ["0", "1", "2"]
     assert tdata.allow_overlap is False
+    assert tdata.has_overlap is False
     assert tdata.label is None
 
 
@@ -107,17 +108,30 @@ def test_tree_overlap(X, tree):
     tdata = td.TreeData(X, obst={"0": tree, "1": second_tree}, allow_overlap=True)
     check_graph_equality(tdata.obst["0"], tree)
     check_graph_equality(tdata.obst["1"], second_tree)
+    assert tdata.has_overlap is True
     # Test set allow_overlap to True
     tdata = td.TreeData(X, obst={"0": tree}, allow_overlap=False)
     assert tdata.allow_overlap is False
+    assert tdata.has_overlap is False
     tdata.allow_overlap = True
     tdata.obst["1"] = tree
     assert list(tdata.obst.keys()) == ["0", "1"]
     assert tdata.allow_overlap
+    assert tdata.has_overlap is True
     # Cannot set allow_overlap to False when overlap is present
     with pytest.raises(ValueError):
         tdata.allow_overlap = False
     assert tdata.allow_overlap
+    assert tdata.has_overlap is True
+
+
+def test_has_overlap_updates_on_delete(X, tree):
+    second_tree = nx.DiGraph()
+    second_tree.add_edges_from([("root", "0"), ("root", "1")])
+    tdata = td.TreeData(X, obst={"0": tree, "1": second_tree}, allow_overlap=True)
+    assert tdata.has_overlap is True
+    del tdata.obst["1"]
+    assert tdata.has_overlap is False
 
 
 def test_alignment(X, tree):
