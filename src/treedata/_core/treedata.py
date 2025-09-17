@@ -330,7 +330,6 @@ class TreeData(ad.AnnData):
         -------
         None - This function updates the `_has_overlap` attribute in place.
         """
-
         if not self._allow_overlap:
             self._has_overlap = False
             return
