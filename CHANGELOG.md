@@ -16,6 +16,18 @@ and this project adheres to [Semantic Versioning][].
 
 ### Fixed
 
+## [0.2.2] - 2025-09-18
+
+### Added
+
+-  `tdata.has_overlap` parameter to check whether the `TreeData` object contains overlapping trees (#59)
+
+### Changed
+
+- Default value for `tdata.allow_overlap` is now `True` (#60)
+
+### Fixed
+
 ## [0.2.1] - 2025-07-10
 
 ### Added

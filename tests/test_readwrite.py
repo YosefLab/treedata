@@ -100,7 +100,7 @@ def test_read_anndata(X, tmp_path):
     tdata = td.read_h5td(file_path)
     assert np.array_equal(tdata.X, adata.X)
     assert tdata.label == "tree"
-    assert tdata.allow_overlap is False
+    assert tdata.allow_overlap is True
     assert tdata.alignment == "leaves"
     assert tdata.obst_keys() == []
 
