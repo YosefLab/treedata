@@ -76,7 +76,7 @@ class TreeData(ad.AnnData):
         - `nodes`: All leaf and internal node names are present in the observation/variable names.
         - `subset`: A subset of leaf and internal node names are present in the observation/variable names.
     allow_overlap
-        Whether trees containing overlapping sets of leaves or nodes are allowed. Default is False.
+        Whether trees containing overlapping sets of leaves or nodes are allowed. Default is True.
     """
 
     def __init__(
@@ -98,7 +98,7 @@ class TreeData(ad.AnnData):
         asview: bool = False,
         label: str | None = "tree",
         alignment: Literal["leaves", "nodes", "subset"] = "leaves",
-        allow_overlap: bool = False,
+        allow_overlap: bool = True,
         *,
         obsp: np.ndarray | Mapping[str, Sequence[Any]] | None = None,
         varp: np.ndarray | Mapping[str, Sequence[Any]] | None = None,

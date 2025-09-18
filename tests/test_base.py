@@ -51,7 +51,7 @@ def test_attributes(X, tree, axis):
     assert getattr(tdata, f"{dim}t").dim == dim
     assert getattr(tdata, f"{dim}t").parent is tdata
     assert list(getattr(tdata, f"{dim}t").dim_names) == ["0", "1", "2"]
-    assert tdata.allow_overlap is False
+    assert tdata.allow_overlap is True
     assert tdata.has_overlap is False
     assert tdata.label is None
 
