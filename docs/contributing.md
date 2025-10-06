@@ -191,7 +191,6 @@ Alternatively, you can run all tests from the command line by executing
 hatch test  # test with the highest supported Python version
 # or
 hatch test --all  # test with all supported Python versions
-```
 
 ::::
 
@@ -325,6 +324,3 @@ cd docs
 sphinx-build -M html . _build -W
 (xdg-)open _build/html/index.html
 ```
-
-::::
-:::::

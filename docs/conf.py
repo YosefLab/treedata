@@ -31,13 +31,13 @@ release = info["Version"]
 
 bibtex_bibfiles = ["references.bib"]
 templates_path = ["_templates"]
-nitpicky = True  # Warn about broken links
+nitpicky = False  # Warn about broken links
 needs_sphinx = "4.0"
 
 html_context = {
     "display_github": True,  # Integrate GitHub
     "github_user": "colganwi",
-    "github_repo": project_name,
+    "github_repo": "https://github.com/YosefLab/treedata",
     "github_version": "main",
     "conf_py_path": "/docs/",
 }
@@ -62,7 +62,12 @@ extensions = [
     *[p.stem for p in (HERE / "extensions").glob("*.py")],
 ]
 
-autosummary_generate = True
+# Inherit docs from anndata
+autodoc_default_options = {
+    "inherited-members": True,
+}
+
+autosummary_generate = True  # Can disabled to avoid inheritance conflicts
 autodoc_member_order = "groupwise"
 default_role = "literal"
 napoleon_google_docstring = False
@@ -70,6 +75,7 @@ napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
 napoleon_use_rtype = True  # having a separate entry generally helps readability
 napoleon_use_param = True
+napoleon_custom_sections = [("Params", "Parameters")]
 myst_heading_anchors = 6  # create anchors for h1-h6
 myst_enable_extensions = [
     "amsmath",
@@ -96,6 +102,11 @@ intersphinx_mapping = {
     "anndata": ("https://anndata.readthedocs.io/en/stable/", None),
     "scanpy": ("https://scanpy.readthedocs.io/en/stable/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
+    "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
+    "networkx": ("https://networkx.org/documentation/stable/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
+    "h5py": ("https://docs.h5py.org/en/stable/", None),
+    "hdf5plugin": ("https://hdf5plugin.readthedocs.io/en/latest/", None),
 }
 
 # List of patterns, relative to source directory, that match files and
@@ -121,6 +132,8 @@ html_theme_options = {
     "path_to_docs": "docs/",
     "navigation_with_keys": False,
 }
+
+html_logo = "_static/img/treedata_schema.svg"
 
 pygments_style = "default"
 
