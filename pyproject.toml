@@ -63,8 +63,8 @@ optional-dependencies.test = [
 ]
 # https://docs.pypi.org/project_metadata/#project-urls
 urls.Documentation = "https://treedata.readthedocs.io/"
-urls.Homepage = "https://github.com/colganwi/treedata"
-urls.Source = "https://github.com/colganwi/treedata"
+urls.Homepage = "https://github.com/YosefLab/treedata"
+urls.Source = "https://github.com/YosefLab/treedata"
 
 [tool.hatch.envs.default]
 installer = "uv"
