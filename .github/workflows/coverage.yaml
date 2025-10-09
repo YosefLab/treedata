@@ -1,0 +1,62 @@
+name: Coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 5 1,15 * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+env:
+  HATCH_ENV: hatch-test.py3.10-stable  # set this to your desired hatch env
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          # Optionally pin the Python that matches your hatch env
+          python-version: "3.10"
+          cache-dependency-glob: pyproject.toml
+
+      - name: Create hatch environment
+        run: uvx hatch env create $HATCH_ENV
+
+      - name: Run tests with coverage
+        env:
+          MPLBACKEND: agg
+          DISPLAY: :42
+        run: uvx hatch run $HATCH_ENV:run-cov -v --color=yes -n auto
+
+      - name: Generate coverage report
+        run: |
+          # If your run-cov doesn’t write .coverage, fail early
+          test -f .coverage
+          uvx hatch run $HATCH_ENV:cov-report
+          uvx hatch run $HATCH_ENV:coverage xml  # writes coverage.xml
+          # quick sanity check
+          grep -m1 'filename=' -n coverage.xml || true
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV }}
+          files: ./coverage.xml
+          disable_search: true
+          fail_ci_if_error: true
+          verbose: true
