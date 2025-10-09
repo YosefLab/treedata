@@ -1,6 +1,7 @@
 [![Tests][badge-tests]][link-tests]
 [![Documentation][badge-docs]][link-docs]
 [![PyPI](https://img.shields.io/pypi/v/treedata.svg)](https://pypi.org/project/treedata)
+[![codecov](https://codecov.io/github/YosefLab/treedata/branch/main/graph/badge.svg?token=YPhuxlw4my)](https://codecov.io/github/YosefLab/treedata)
 
 [badge-tests]: https://img.shields.io/github/actions/workflow/status/YosefLab/treedata/test.yaml?branch=main
 [link-tests]: https://github.com/YosefLab/treedata/actions/workflows/test.yaml

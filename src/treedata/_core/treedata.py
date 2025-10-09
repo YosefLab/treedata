@@ -301,6 +301,12 @@ class TreeData(ad.AnnData):
         self._vart = vart
         self._update_has_overlap()
 
+    @label.setter
+    def label(self, value):
+        if value is not None and not isinstance(value, str):
+            raise ValueError("label has to be a string or None")
+        self._tree_label = value
+
     @allow_overlap.setter
     def allow_overlap(self, value):
         if not isinstance(value, bool):

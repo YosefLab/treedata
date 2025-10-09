@@ -144,6 +144,18 @@ def test_subset_alignment(nodes_tdata):
     assert list(tdata.vart.keys()) == ["tree"]
 
 
+def test_merge_multiple_values(tdata_list):
+    # Test merging with mumtiple tree values
+    tdata_list[0].label = "other"
+    with pytest.warns(UserWarning):
+        tdata = td.concat(tdata_list, axis=0, join="outer", merge="first")
+    assert tdata.label == "tree"
+    tdata_list[1].alignment = "subset"
+    with pytest.warns(UserWarning):
+        tdata = td.concat(tdata_list, axis=0, join="outer", merge="first")
+    assert tdata.alignment == "subset"
+
+
 def test_concat_bad_index(tdata_list):
     tdata_list[0].obs.index = tdata_list[1].obs.index
     with pytest.raises(ValueError):
