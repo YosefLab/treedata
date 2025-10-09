@@ -68,7 +68,10 @@ jobs:
           grep -m1 'filename=' -n coverage.xml || { echo "coverage.xml missing filenames"; exit 1; }
 
       - name: Upload to Codecov
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
         uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV }}
         with:
           token: ${{ secrets.CODECOV }}
           files: ./coverage.xml
