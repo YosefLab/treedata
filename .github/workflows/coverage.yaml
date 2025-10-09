@@ -45,12 +45,27 @@ jobs:
 
       - name: Generate coverage report
         run: |
-          # If your run-cov doesn’t write .coverage, fail early
-          test -f .coverage
-          uvx hatch run $HATCH_ENV:cov-report
-          uvx hatch run $HATCH_ENV:coverage xml  # writes coverage.xml
-          # quick sanity check
-          grep -m1 'filename=' -n coverage.xml || true
+          shopt -s nullglob
+          echo "Raw coverage files before combine:"
+          ls -la .coverage* || true
+
+          # If there isn't a single .coverage file, combine parallel files
+          if [ ! -f .coverage ]; then
+            # Prefer your Hatch task if defined; fall back to coverage combine
+            uvx hatch run $HATCH_ENV:cov-combine || coverage combine
+          fi
+
+          echo "Coverage files after combine:"
+          ls -la .coverage*
+
+          # Human-readable summary (optional)
+          uvx hatch run $HATCH_ENV:cov-report || coverage report -m || true
+
+          # Create XML for Codecov
+          uvx hatch run $HATCH_ENV:coverage xml || coverage xml -o coverage.xml
+
+          # Quick sanity check
+          grep -m1 'filename=' -n coverage.xml || { echo "coverage.xml missing filenames"; exit 1; }
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v5
