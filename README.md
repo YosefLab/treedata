@@ -2,6 +2,7 @@
 [![Documentation][badge-docs]][link-docs]
 [![PyPI](https://img.shields.io/pypi/v/treedata.svg)](https://pypi.org/project/treedata)
 [![codecov](https://codecov.io/github/YosefLab/treedata/branch/main/graph/badge.svg?token=YPhuxlw4my)](https://codecov.io/github/YosefLab/treedata)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/treedata?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/treedata)
 
 [badge-tests]: https://img.shields.io/github/actions/workflow/status/YosefLab/treedata/test.yaml?branch=main
 [link-tests]: https://github.com/YosefLab/treedata/actions/workflows/test.yaml
