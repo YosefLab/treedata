@@ -16,6 +16,19 @@ and this project adheres to [Semantic Versioning][].
 
 ### Fixed
 
+## [0.2.3] - 2025-10-14
+
+### Added
+
+### Changed
+
+- Optimized tree overlap detection to speed up copying and subsetting with many trees (#66)
+- Switch to hatch with v0.0.6 template update (#61)
+
+### Fixed
+
+- Fixed codecov configuration (#64)
+
 ## [0.2.2] - 2025-09-18
 
 ### Added
