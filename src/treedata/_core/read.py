@@ -9,15 +9,15 @@ import anndata as ad
 import h5py
 import networkx as nx
 import zarr
-from packaging import version
+from importlib.metadata import version as get_version
 
 from treedata._core.treedata import TreeData
 
 if TYPE_CHECKING:
     from os import PathLike
 
-ANDATA_VERSION = version.parse(ad.__version__)
-USE_EXPERIMENTAL = ANDATA_VERSION < version.parse("0.11.0")
+ANNDATA_VERSION = version.parse(get_version("anndata"))
+USE_EXPERIMENTAL = ANNDATA_VERSION < version.parse("0.11.0")
 
 
 def _read_elem(elem):
