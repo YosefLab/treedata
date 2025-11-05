@@ -36,6 +36,8 @@ Reading TreeData objects:
    read_zarr
 ```
 
+TreeData can read Zarr stores created with both Zarr v2 and Zarr v3.
+
 ## Write
 
 Writing TreeData objects:
@@ -47,3 +49,6 @@ Writing TreeData objects:
    TreeData.write_h5td
    TreeData.write_zarr
 ```
+
+TreeData writes Zarr stores using the same compatibility strategy as AnnData,
+ensuring interoperability with both Zarr v2 and v3 runtimes.

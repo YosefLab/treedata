@@ -18,6 +18,7 @@ from .aligned_mapping import AxisTrees, AxisTreesView
 
 if TYPE_CHECKING:
     from os import PathLike
+    import zarr
 
     Index1D = slice | int | str | np.int64 | np.ndarray | list[str | int] | pd.Index
     Index = Index1D | tuple[Index1D, Index1D] | sparse.spmatrix | sparse.sparray
@@ -495,7 +496,7 @@ class TreeData(ad.AnnData):
 
     def write_zarr(
         self,
-        store: MutableMapping | PathLike,
+        store: MutableMapping | PathLike | "zarr.Group",
         chunks: bool | int | tuple[int, ...] | None = None,
         **kwargs,
     ):
@@ -504,7 +505,7 @@ class TreeData(ad.AnnData):
         Parameters
         ----------
         store
-            The filename, a :class:`~typing.MutableMapping`, or a Zarr storage class.
+            The filename, a :class:`~typing.MutableMapping`, or a :class:`~zarr.Group`.
         chunks
             Chunk shape.
         """

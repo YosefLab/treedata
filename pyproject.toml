@@ -33,7 +33,7 @@ dependencies = [
   "pathlib",
   "pyarrow",
   "session-info2",
-  "zarr>=2,<3",
+  "zarr>=2,<4",
 ]
 optional-dependencies.dev = [
   "pre-commit",

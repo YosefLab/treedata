@@ -18,6 +18,17 @@ from packaging import version
 from treedata._core.aligned_mapping import AxisTrees
 from treedata._core.treedata import TreeData
 
+try:
+    from anndata.compat import is_zarr_v2
+except ImportError:  # pragma: no cover - anndata is a hard dependency
+    def is_zarr_v2() -> bool:  # type: ignore[misc]
+        return True
+
+try:  # pragma: no cover - fallback for unexpected anndata changes
+    from anndata._settings import settings as anndata_settings
+except ImportError:  # pragma: no cover - anndata is a hard dependency
+    anndata_settings = None
+
 ANDATA_VERSION = version.parse(ad.__version__)
 USE_EXPERIMENTAL = ANDATA_VERSION < version.parse("0.11.0")
 
@@ -44,6 +55,33 @@ def _write_elem(f, k, elem, *, dataset_kwargs) -> None:
         ad.experimental.write_elem(f, k, elem, dataset_kwargs=dataset_kwargs)
     else:
         ad.io.write_elem(f, k, elem, dataset_kwargs=dataset_kwargs)
+
+
+def _open_zarr_group(
+    store: MutableMapping | PathLike | zarr.Group,
+    *,
+    mode: str = "w",
+) -> tuple[zarr.Group, bool]:
+    """Open a Zarr group for writing and indicate ownership."""
+    if isinstance(store, zarr.Group):
+        return store, False
+    group_kwargs: dict[str, int] = {}
+    if not is_zarr_v2():
+        zarr_format = 3
+        if anndata_settings is not None:
+            zarr_format = getattr(anndata_settings, "zarr_write_format", zarr_format)
+        group_kwargs["zarr_format"] = zarr_format
+    return zarr.open_group(store, mode=mode, **group_kwargs), True
+
+
+def _close_zarr_group(group: zarr.Group, should_close: bool) -> None:
+    """Close the underlying store for an opened Zarr group if needed."""
+    if should_close:
+        store = getattr(group, "store", None)
+        if store is not None:
+            close = getattr(store, "close", None)
+            if callable(close):
+                close()
 
 
 def _digraph_to_dict(G: nx.DiGraph) -> dict:
@@ -152,17 +190,29 @@ def write_h5ad(
     )
 
 
-def write_zarr(filename: MutableMapping | PathLike, tdata: TreeData, **kwargs) -> None:
+def write_zarr(
+    filename: MutableMapping | PathLike | zarr.Group, tdata: TreeData, **kwargs
+) -> None:
     """Write `.zarr`-formatted zarr file.
 
     Parameters
     ----------
     filename
-        Filename of data file. Defaults to backing file.
+        Filename of data file, a pre-existing :class:`~zarr.Group`, or a mapping
+        store. Defaults to the backing file when omitted.
     tdata
         TreeData object to write.
     kwargs
         Additional keyword arguments passed to :func:`zarr.save`.
     """
-    with zarr.open(filename, mode="w") as f:
-        _write_tdata(f, tdata, filename, **kwargs)
+    group, should_close = _open_zarr_group(filename)
+    try:
+        _write_tdata(group, tdata, filename, **kwargs)
+        store = getattr(group, "store", None)
+        if store is not None:
+            if is_zarr_v2():
+                zarr.convenience.consolidate_metadata(store)
+            else:
+                zarr.consolidate_metadata(store)
+    finally:
+        _close_zarr_group(group, should_close)
