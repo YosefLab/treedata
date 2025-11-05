@@ -5,6 +5,7 @@ import warnings
 from collections.abc import MutableMapping
 from importlib.metadata import version as get_version
 from typing import TYPE_CHECKING, Literal
+from packaging import version
 
 import anndata as ad
 import h5py
