@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "treedata"
-version = "0.2.3"
+version = "0.2.4"
 description = "anndata with trees"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -33,7 +33,7 @@ dependencies = [
   "pathlib",
   "pyarrow",
   "session-info2",
-  "zarr>=2,<3",
+  "zarr>=2",
 ]
 optional-dependencies.dev = [
   "pre-commit",

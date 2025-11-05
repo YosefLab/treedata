@@ -8,13 +8,26 @@ and this project adheres to [Semantic Versioning][].
 [keep a changelog]: https://keepachangelog.com/en/1.0.0/
 [semantic versioning]: https://semver.org/spec/v2.0.0.html
 
-## [Unrealeased]
+## [Unreleased]
 
 ### Added
 
 ### Changed
 
 ### Fixed
+
+## [0.2.4] - 2025-11-05
+
+### Added
+
+### Changed
+
+- Deprecated `TreeData.obst_keys` and `TreeData.vart_keys` for consistency with AnnData (https://github.com/scverse/anndata/pull/2093) (#73)
+
+### Fixed
+
+- Added support for zarr v3 (#73)
+- Eliminated deprecations warnings from AnnData>=0.12.0 (#73)
 
 ## [0.2.3] - 2025-10-14
 

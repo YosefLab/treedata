@@ -144,6 +144,22 @@ def read_h5ad(
     return read_h5td(filename, backed=backed)
 
 
+def _open_zarr_group(store, *, mode: str = "r") -> tuple[zarr.Group, bool]:
+    """Open a Zarr group and signal whether it should be closed."""
+    if isinstance(store, zarr.Group):
+        return store, False
+    return zarr.open(store, mode=mode), True
+
+
+def _close_zarr_group(group: zarr.Group) -> None:
+    """Close the underlying store for an opened Zarr group if needed."""
+    store = getattr(group, "store", None)
+    if store is not None:
+        close = getattr(store, "close", None)
+        if callable(close):
+            close()
+
+
 def read_zarr(store: str | PathLike | MutableMapping | zarr.Group) -> TreeData:
     """Read from a hierarchical Zarr array store.
 
@@ -152,6 +168,8 @@ def read_zarr(store: str | PathLike | MutableMapping | zarr.Group) -> TreeData:
     store
         The filename, a :class:`~typing.MutableMapping`, or a Zarr storage class.
     """
-    with zarr.open(store, mode="r") as f:
-        d = _read_tdata(f, store, backed=False)
+    group, should_close = _open_zarr_group(store)
+    d = _read_tdata(group, store, backed=False)
+    if should_close:
+        _close_zarr_group(group)
     return TreeData(**d)

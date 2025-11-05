@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import warnings
 from collections.abc import MutableMapping
+from importlib.metadata import version as get_version
 from os import PathLike
 from pathlib import Path
 from typing import Any, Literal
@@ -18,8 +19,9 @@ from packaging import version
 from treedata._core.aligned_mapping import AxisTrees
 from treedata._core.treedata import TreeData
 
-ANDATA_VERSION = version.parse(ad.__version__)
-USE_EXPERIMENTAL = ANDATA_VERSION < version.parse("0.11.0")
+ANNDATA_VERSION = version.parse(get_version("anndata"))
+USE_EXPERIMENTAL = ANNDATA_VERSION < version.parse("0.11.0")
+ZARR_V2 = version.parse(get_version("zarr")) < version.parse("3.0.0")
 
 
 def _make_serializable(data: Any) -> Any:
@@ -63,7 +65,7 @@ def _serialize_axis_trees(trees: AxisTrees) -> str:
     return json.dumps(_make_serializable(d))
 
 
-def _write_tdata(f, tdata, filename, **kwargs) -> None:
+def _write_tdata(f, tdata, filename, chunks=None, **kwargs) -> None:
     """Write TreeData to file."""
     # Add encoding type and version
     f = f["/"]
@@ -73,7 +75,7 @@ def _write_tdata(f, tdata, filename, **kwargs) -> None:
     tdata.strings_to_categoricals()
     # Write X if not backed
     if not (tdata.isbacked and Path(tdata.filename) == Path(filename)):
-        _write_elem(f, "X", tdata.X, dataset_kwargs=kwargs)
+        _write_elem(f, "X", tdata.X, dataset_kwargs=kwargs.update({"chunks": chunks}) if chunks else kwargs)
     # Write array elements
     for key in ["obs", "var", "label", "allow_overlap", "alignment"]:
         _write_elem(f, key, getattr(tdata, key), dataset_kwargs=kwargs)
@@ -152,7 +154,32 @@ def write_h5ad(
     )
 
 
-def write_zarr(filename: MutableMapping | PathLike, tdata: TreeData, **kwargs) -> None:
+def _open_zarr_group(
+    store: MutableMapping | PathLike | zarr.Group,
+    *,
+    mode: str = "w",
+) -> tuple[zarr.Group, bool]:
+    """Open a Zarr group for writing and indicate ownership."""
+    if isinstance(store, zarr.Group):
+        return store, False
+    group_kwargs: dict[str, int] = {}
+    if not ZARR_V2:
+        group_kwargs["zarr_format"] = 3
+    return zarr.open_group(store, mode=mode, **group_kwargs), True
+
+
+def _close_zarr_group(group: zarr.Group) -> None:
+    """Close the underlying store for an opened Zarr group if needed."""
+    store = getattr(group, "store", None)
+    if store is not None:
+        close = getattr(store, "close", None)
+        if callable(close):
+            close()
+
+
+def write_zarr(
+    filename: MutableMapping | PathLike | zarr.Group, tdata: TreeData, chunks: tuple[int, ...] | None = None, **kwargs
+) -> None:
     """Write `.zarr`-formatted zarr file.
 
     Parameters
@@ -164,5 +191,11 @@ def write_zarr(filename: MutableMapping | PathLike, tdata: TreeData, **kwargs) -
     kwargs
         Additional keyword arguments passed to :func:`zarr.save`.
     """
-    with zarr.open(filename, mode="w") as f:
-        _write_tdata(f, tdata, filename, **kwargs)
+    # if not ZARR_V2 and "zarr_format" not in kwargs:
+    #    f = zarr.open(store=filename, mode="w", zarr_format=3)
+    # else:
+    print(kwargs)
+    f, should_close = _open_zarr_group(filename)
+    _write_tdata(f, tdata, filename, chunks, **kwargs)
+    if should_close:
+        _close_zarr_group(f)

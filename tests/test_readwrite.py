@@ -102,7 +102,7 @@ def test_read_anndata(X, tmp_path):
     assert tdata.label == "tree"
     assert tdata.allow_overlap is True
     assert tdata.alignment == "leaves"
-    assert tdata.obst_keys() == []
+    assert list(tdata.obst.keys()) == []
 
 
 def test_read_no_X(X, tmp_path):
