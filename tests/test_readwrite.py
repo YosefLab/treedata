@@ -123,9 +123,7 @@ def test_write_zarr_v3_kwargs_and_consolidation(tdata, tmp_path, monkeypatch):
         return real_open_group(store, mode=mode, **cleaned_kwargs)
 
     monkeypatch.setattr(td_write.zarr, "open_group", fake_open_group)
-    monkeypatch.setattr(
-        td_write.zarr, "consolidate_metadata", lambda store: consolidated.__setitem__("called", True)
-    )
+    monkeypatch.setattr(td_write.zarr, "consolidate_metadata", lambda store: consolidated.__setitem__("called", True))
 
     tdata.write_zarr(tmp_path / "test_v3.zarr")
 

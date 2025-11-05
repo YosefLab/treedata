@@ -21,8 +21,10 @@ from treedata._core.treedata import TreeData
 try:
     from anndata.compat import is_zarr_v2
 except ImportError:  # pragma: no cover - anndata is a hard dependency
+
     def is_zarr_v2() -> bool:  # type: ignore[misc]
         return True
+
 
 try:  # pragma: no cover - fallback for unexpected anndata changes
     from anndata._settings import settings as anndata_settings
@@ -190,9 +192,7 @@ def write_h5ad(
     )
 
 
-def write_zarr(
-    filename: MutableMapping | PathLike | zarr.Group, tdata: TreeData, **kwargs
-) -> None:
+def write_zarr(filename: MutableMapping | PathLike | zarr.Group, tdata: TreeData, **kwargs) -> None:
     """Write `.zarr`-formatted zarr file.
 
     Parameters
