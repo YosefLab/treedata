@@ -3,13 +3,13 @@ from __future__ import annotations
 import json
 import warnings
 from collections.abc import MutableMapping
+from importlib.metadata import version as get_version
 from typing import TYPE_CHECKING, Literal
 
 import anndata as ad
 import h5py
 import networkx as nx
 import zarr
-from importlib.metadata import version as get_version
 
 from treedata._core.treedata import TreeData
 
