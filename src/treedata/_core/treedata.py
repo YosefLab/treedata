@@ -232,10 +232,21 @@ class TreeData(ad.AnnData):
 
     def obst_keys(self) -> list[str]:
         """List keys of variable annotation `obst`."""
+        # add future warning
+        warnings.warn(
+            "Use obst (e.g. `k in tdata.obst` or `adata.obst.keys()`) instead of TreeData.obst_keys, TreeData.obst_keys is deprecated and will be removed in the future.",
+            FutureWarning,
+            stacklevel=2,
+        )
         return list(self._obst.keys())
 
     def vart_keys(self) -> list[str]:
         """List keys of variable annotation `vart`."""
+        warnings.warn(
+            "Use vart (e.g. `k in tdata.vart` or `adata.vart.keys()`) instead of TreeData.vart_keys, TreeData.vart_keys is deprecated and will be removed in the future.",
+            FutureWarning,
+            stacklevel=2,
+        )
         return list(self._vart.keys())
 
     @property
@@ -496,7 +507,7 @@ class TreeData(ad.AnnData):
     def write_zarr(
         self,
         store: MutableMapping | PathLike,
-        chunks: bool | int | tuple[int, ...] | None = None,
+        chunks: tuple[int, ...] | None = None,
         **kwargs,
     ):
         """Write a hierarchical Zarr array store.
@@ -510,6 +521,13 @@ class TreeData(ad.AnnData):
         """
         from .write import write_zarr
 
+        if isinstance(chunks, bool):
+            msg = (
+                "Passing `write_zarr(adata, chunks=True)` is no longer supported. "
+                "Please pass `write_zarr(adata)` instead."
+            )
+            raise ValueError(msg)
+
         write_zarr(store, self, chunks=chunks)
 
     def to_memory(self, copy=False) -> TreeData:
@@ -520,7 +538,7 @@ class TreeData(ad.AnnData):
             copy:
                 Whether the arrays that are already in-memory should be copied.
         """
-        adata = super().to_memory(copy)
+        adata = super().to_memory(copy=copy)
         tdata = TreeData(
             adata,
             obst=self.obst.copy(),

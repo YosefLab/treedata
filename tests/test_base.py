@@ -246,7 +246,7 @@ def test_transpose(adata, tree):
     treedata_transpose = treedata.transpose()
     assert np.array_equal(treedata.X.T, treedata_transpose.X)
     assert treedata.obst["tree"].nodes == treedata_transpose.vart["tree"].nodes
-    assert treedata_transpose.obst_keys() == []
+    assert list(treedata_transpose.obst.keys()) == []
     assert np.array_equal(treedata.obs_names, treedata.T.obs_names)
 
 
