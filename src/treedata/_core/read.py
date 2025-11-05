@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import warnings
 from collections.abc import MutableMapping
+from importlib.metadata import version as get_version
 from typing import TYPE_CHECKING, Literal
 
 import anndata as ad
@@ -16,8 +17,8 @@ from treedata._core.treedata import TreeData
 if TYPE_CHECKING:
     from os import PathLike
 
-ANDATA_VERSION = version.parse(ad.__version__)
-USE_EXPERIMENTAL = ANDATA_VERSION < version.parse("0.11.0")
+ANNDATA_VERSION = version.parse(get_version("anndata"))
+USE_EXPERIMENTAL = ANNDATA_VERSION < version.parse("0.11.0")
 
 
 def _read_elem(elem):
