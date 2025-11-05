@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 import treedata as td
+import treedata._core.write as td_write
 
 
 @pytest.fixture
@@ -91,6 +92,45 @@ def test_zarr_readwrite(tdata, tmp_path):
     assert tdata2.alignment == "leaves"
     assert tdata2.obst["2"].nodes["root"]["depth"] == 0
     assert tdata2.obs.loc["0", "tree"] == "1,2"
+
+
+def test_write_zarr_consolidates_metadata_v2(tdata, tmp_path, monkeypatch):
+    consolidated = {"called": False}
+
+    monkeypatch.setattr(td_write, "is_zarr_v2", lambda: True)
+    monkeypatch.setattr(
+        td_write.zarr.convenience,
+        "consolidate_metadata",
+        lambda store: consolidated.__setitem__("called", True),
+    )
+
+    tdata.write_zarr(tmp_path / "test_consolidated.zarr")
+
+    assert consolidated["called"]
+
+
+def test_write_zarr_v3_kwargs_and_consolidation(tdata, tmp_path, monkeypatch):
+    open_kwargs = {}
+    consolidated = {"called": False}
+
+    monkeypatch.setattr(td_write, "is_zarr_v2", lambda: False)
+
+    real_open_group = td_write.zarr.open_group
+
+    def fake_open_group(store, mode="r", **kwargs):
+        open_kwargs.update(kwargs)
+        cleaned_kwargs = {k: v for k, v in kwargs.items() if k != "zarr_format"}
+        return real_open_group(store, mode=mode, **cleaned_kwargs)
+
+    monkeypatch.setattr(td_write.zarr, "open_group", fake_open_group)
+    monkeypatch.setattr(
+        td_write.zarr, "consolidate_metadata", lambda store: consolidated.__setitem__("called", True)
+    )
+
+    tdata.write_zarr(tmp_path / "test_v3.zarr")
+
+    assert "zarr_format" in open_kwargs
+    assert consolidated["called"]
 
 
 def test_read_anndata(X, tmp_path):

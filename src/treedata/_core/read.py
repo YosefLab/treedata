@@ -29,6 +29,23 @@ def _read_elem(elem):
         return ad.io.read_elem(elem)
 
 
+def _open_zarr_group(store, *, mode: str = "r") -> tuple[zarr.Group, bool]:
+    """Open a Zarr group and signal whether it should be closed."""
+    if isinstance(store, zarr.Group):
+        return store, False
+    return zarr.open(store, mode=mode), True
+
+
+def _close_zarr_group(group: zarr.Group, should_close: bool) -> None:
+    """Close the underlying store for an opened Zarr group if needed."""
+    if should_close:
+        store = getattr(group, "store", None)
+        if store is not None:
+            close = getattr(store, "close", None)
+            if callable(close):
+                close()
+
+
 def _dict_to_digraph(graph_dict: dict) -> nx.DiGraph:
     """Convert a dictionary to a networkx.DiGraph."""
     G = nx.DiGraph()
@@ -152,6 +169,9 @@ def read_zarr(store: str | PathLike | MutableMapping | zarr.Group) -> TreeData:
     store
         The filename, a :class:`~typing.MutableMapping`, or a Zarr storage class.
     """
-    with zarr.open(store, mode="r") as f:
-        d = _read_tdata(f, store, backed=False)
+    group, should_close = _open_zarr_group(store)
+    try:
+        d = _read_tdata(group, store, backed=False)
+    finally:
+        _close_zarr_group(group, should_close)
     return TreeData(**d)
