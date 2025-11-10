@@ -24,7 +24,7 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-  "anndata",
+  "anndata>=0.11",
   "h5py",
   "networkx",
   "numpy",
