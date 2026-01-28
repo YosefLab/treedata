@@ -12,4 +12,161 @@ and this project adheres to [Semantic Versioning][].
 
 ### Added
 
--   Basic tool, preprocessing and plotting functions
+### Changed
+
+### Fixed
+
+## [0.2.4] - 2025-11-05
+
+### Added
+
+### Changed
+
+- Deprecated `TreeData.obst_keys` and `TreeData.vart_keys` for consistency with AnnData (https://github.com/scverse/anndata/pull/2093) (#73)
+
+### Fixed
+
+- Added support for zarr v3 (#73)
+- Eliminated deprecations warnings from AnnData>=0.12.0 (#73)
+
+## [0.2.3] - 2025-10-14
+
+### Added
+
+### Changed
+
+- Optimized tree overlap detection to speed up copying and subsetting with many trees (#66)
+- Switch to hatch with v0.0.6 template update (#61)
+
+### Fixed
+
+- Fixed codecov configuration (#64)
+
+## [0.2.2] - 2025-09-18
+
+### Added
+
+-  `tdata.has_overlap` parameter to check whether the `TreeData` object contains overlapping trees (#59)
+
+### Changed
+
+- Default value for `tdata.allow_overlap` is now `True` (#60)
+
+### Fixed
+
+## [0.2.1] - 2025-07-10
+
+### Added
+
+-  support for instantiating `TreeData` objects with only the tree structure (#56)
+
+### Changed
+
+- Updated docs to clarify all the ways `TreeData` can be instantiated (#56)
+
+### Fixed
+
+## [0.2.0] - 2025-06-16
+
+### Added
+
+- `alignment` parameter which allows for `obs_names` and `var_names` aligned to either the leaves, nodes, or a subset of leaves and nodes in trees stored in the `obst` and `vart` fields. Added a tutorial describing how `alignment` works (#55)
+
+### Changed
+
+- `read_h5ad` and `write_h5ad` and been renamed `read_h5td` and `write_h5td` to clarify that the `treedata` format differs from `anndata`. `read_h5ad` and `write_h5ad` will be removed in `v1.0.0` (#56)
+
+### Fixed
+
+- Fixed typing issues (#51)
+
+## [0.1.3] - 2025-01-20
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Fixed typing issues (#51)
+
+- Fixed `ImportError: zarr-python major version > 2 is not supported'` error with Python 12 (#46)
+
+## [0.1.2] - 2024-12-02
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Fixed `KeyError: "Unable to synchronously open object (object 'X' doesn't exist)"'` when reading h5ad without X field (#40)
+
+## [0.1.1] - 2024-11-25
+
+### Added
+
+- Axis in `td.concat` can now be specified with `obs` and `var` (#40)
+
+### Changed
+
+### Fixed
+
+- Fixed `ImportError: cannot import name '_resolve_dim' from 'anndata._core.merge'` caused by anndata update (#40)
+
+## [0.1.0] - 2024-09-27
+
+### Added
+
+### Changed
+
+- Encoding of `treedata` attributes in h5ad and zarr files. `label`, `allow_overlap`, `obst`, and `vart` are now separate fields in the file. (#31)
+
+### Fixed
+
+- `TreeData` objects with `.raw` specified can now be read (#31)
+
+## [0.0.4] - 2024-09-02
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Fixed typing bug introduced by anndata update (#29)
+
+## [0.0.3] - 2024-08-21
+
+### Added
+
+- Add concatenation tutorial to documentation (#27)
+
+### Changed
+
+- `obst` and `vart` create local copy of `nx.DiGraphs` that are added (#26)
+- `TreeData.label` value remains the same after `td.concat` as long as all `label` values are the same for all objects (#27)
+
+### Fixed
+
+- Fixed bug which caused key to be listed twice in `label` column after value update in `obst` or `vart` (#26)
+
+## [0.0.2] - 2024-06-18
+
+### Changed
+
+- Empty trees are now allowed to avoid error on subsetting (#13)
+- How trees are stored in h5ad and zarr files (#16)
+- Format of label column with multiple trees ([1,2] -> 1,2) (#16)
+
+### Fixed
+
+- Fixed issue with slow read/write of large trees
+
+## [0.0.1] - 2024-05-13
+
+### Added
+
+- TreeData class for storing and manipulating trees
+- Read/write trees to h5ad and zarr files
+- Concatenate trees with similar API to AnnData

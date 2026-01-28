@@ -38,7 +38,8 @@ jobs:
                 | {
                     name: .key,
                     label: (if (.key | contains("pre")) then .key + " (PRE-RELEASE DEPENDENCIES)" else .key end),
-                    python: .value.python
+                    python: .value.python,
+                    allow_failure: (.key | contains("pre"))
                   }
               )')
           echo "envs=${ENVS_JSON}" | tee $GITHUB_OUTPUT
@@ -58,6 +59,8 @@ jobs:
     name: ${{ matrix.env.label }}
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ contains(matrix.env.name, 'pre') }}  # make "all-green" pass even if pre-release job fails
+
+    continue-on-error: ${{ matrix.env.allow_failure }}
 
     steps:
       - uses: actions/checkout@v5
@@ -82,7 +85,11 @@ jobs:
           test -f .coverage || uvx hatch run ${{ matrix.env.name }}:cov-combine
           uvx hatch run ${{ matrix.env.name }}:cov-report   # report visibly
           uvx hatch run ${{ matrix.env.name }}:coverage xml # create report for upload
+          # Quick sanity check
+          grep -m1 'filename=' -n coverage.xml || { echo "coverage.xml missing filenames"; exit 1; }
       - name: Upload coverage
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV }}
         uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: true

@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "treedata"
-version = "0.0.1"
+version = "0.2.4"
 description = "anndata with trees"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -23,9 +23,16 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-  "anndata",
-  # for debug logging (referenced from the issue template)
+  "anndata>=0.11",
+  "h5py",
+  "networkx",
+  "numpy",
+  "packaging",
+  "pandas",
+  "pathlib",
+  "pyarrow",
   "session-info2",
+  "zarr>=2",
 ]
 # https://docs.pypi.org/project_metadata/#project-urls
 urls.Documentation = "https://treedata.readthedocs.io/"
@@ -47,6 +54,9 @@ doc = [
   "ipython",
   "myst-nb>=1.1",
   "pandas",
+  "pygraphviz",
+  # Until pybtex >0.24.0 releases: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
+  "setuptools",
   "sphinx>=8.1",
   "sphinx-autodoc-typehints",
   "sphinx-book-theme>=1",
@@ -56,14 +66,24 @@ doc = [
   "sphinxcontrib-katex",
   "sphinxext-opengraph",
 ]
+optional-dependencies.test = [
+  "coverage>=7.10",
+  "joblib",
+  "pytest",
+  "pytest-cov",     # For VS Code’s coverage functionality
+]
+# https://docs.pypi.org/project_metadata/#project-urls
+urls.Documentation = "https://treedata.readthedocs.io/"
+urls.Homepage = "https://github.com/YosefLab/treedata"
+urls.Source = "https://github.com/YosefLab/treedata"
 
 [tool.hatch.envs.default]
 installer = "uv"
 dependency-groups = [ "dev" ]
 
 [tool.hatch.envs.docs]
-dependency-groups = [ "doc" ]
-scripts.build = "sphinx-build -M html docs docs/_build -W {args}"
+features = [ "doc" ]
+scripts.build = "sphinx-build -M html docs docs/_build {args}"
 scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
 

@@ -2,6 +2,7 @@
 .DS_Store
 *~
 buck-out/
+*._*
 
 # Compiled files
 .venv/
@@ -19,3 +20,13 @@ __pycache__/
 # docs
 /docs/generated/
 /docs/_build/
+
+# IDEs
+/.idea/
+/.vscode/
+
+# Prettier
+/node_modules/
+
+# Environment
+environment.yml
