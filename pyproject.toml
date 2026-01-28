@@ -34,7 +34,7 @@ dependencies = [
   "session-info2",
   "zarr>=2",
 ]
-# https://docs.pypi.org/project_metadata/#project-urls
+
 urls.Documentation = "https://treedata.readthedocs.io/"
 urls.Homepage = "https://github.com/colganwi/treedata"
 urls.Source = "https://github.com/colganwi/treedata"
@@ -46,6 +46,7 @@ dev = [
 ]
 test = [
   "coverage>=7.10",
+  "joblib",
   "pytest",
   "pytest-cov",     # For VS Code’s coverage functionality
 ]
@@ -66,23 +67,14 @@ doc = [
   "sphinxcontrib-katex",
   "sphinxext-opengraph",
 ]
-optional-dependencies.test = [
-  "coverage>=7.10",
-  "joblib",
-  "pytest",
-  "pytest-cov",     # For VS Code’s coverage functionality
-]
-# https://docs.pypi.org/project_metadata/#project-urls
-urls.Documentation = "https://treedata.readthedocs.io/"
-urls.Homepage = "https://github.com/YosefLab/treedata"
-urls.Source = "https://github.com/YosefLab/treedata"
 
 [tool.hatch.envs.default]
 installer = "uv"
 dependency-groups = [ "dev" ]
 
 [tool.hatch.envs.docs]
-features = [ "doc" ]
+installer = "uv"
+dependency-groups = [ "doc" ]
 scripts.build = "sphinx-build -M html docs docs/_build {args}"
 scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
