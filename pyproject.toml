@@ -29,7 +29,6 @@ dependencies = [
   "numpy",
   "packaging",
   "pandas",
-  "pathlib",
   "pyarrow",
   "session-info2",
   "zarr>=2",
