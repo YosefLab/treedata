@@ -224,6 +224,43 @@ def _is_zip_store(store: Any) -> bool:
     )
 
 
+def _write_zarr_via_memory(
+    zip_target: zarr.storage.ZipStore | PathLike | str,
+    tdata: TreeData,
+    chunks: tuple[int, ...] | None,
+    **kwargs: Any,
+) -> None:
+    """Write to a ZipStore via an intermediate MemoryStore.
+
+    zarr v3's ZipStore is append-only: every metadata update appends a new
+    zarr.json entry, producing duplicate-name warnings. Writing to MemoryStore
+    first (which supports overwriting) and then bulk-copying the final state to
+    the ZipStore ensures each key is written exactly once.
+    """
+    mem_store = zarr.storage.MemoryStore()
+    f = zarr.open_group(mem_store, mode="w", zarr_format=3)
+    _write_tdata(f, tdata, zip_target, chunks, **kwargs)
+
+    if isinstance(zip_target, zarr.storage.ZipStore):
+        zip_store = zip_target
+        should_close = False
+    else:
+        zip_store = zarr.storage.ZipStore(str(zip_target), mode="w")
+        should_close = True
+
+    # ZipStore has no __setitem__; writes go through the async set() method.
+    from zarr.core.sync import sync as _zarr_sync
+
+    async def _bulk_copy() -> None:
+        for key, value in mem_store._store_dict.items():
+            await zip_store.set(key, value)
+
+    _zarr_sync(_bulk_copy())
+
+    if should_close:
+        zip_store.close()
+
+
 def write_zarr(
     filename: MutableMapping | PathLike | zarr.Group, tdata: TreeData, chunks: tuple[int, ...] | None = None, **kwargs
 ) -> None:
@@ -245,42 +282,3 @@ def write_zarr(
         _write_tdata(f, tdata, filename, chunks, **kwargs)
         if should_close:
             _close_zarr_group(f)
-
-
-def _write_zarr_via_memory(
-    zip_target: zarr.storage.ZipStore | PathLike | str,
-    tdata: TreeData,
-    chunks: tuple[int, ...] | None,
-    **kwargs: Any,
-) -> None:
-    """Write to a ZipStore via an intermediate MemoryStore.
-
-    zarr v3's ZipStore is append-only: every attribute update rewrites zarr.json,
-    producing duplicate-name warnings. Writing to MemoryStore first (which
-    supports overwriting) and then bulk-copying the final state to the ZipStore
-    ensures each key is written exactly once.
-    """
-    mem_store = zarr.storage.MemoryStore()
-    f = zarr.open_group(mem_store, mode="w", zarr_format=3)
-    _write_tdata(f, tdata, zip_target, chunks, **kwargs)
-
-    if isinstance(zip_target, zarr.storage.ZipStore):
-        zip_store = zip_target
-        should_close = False
-    else:
-        zip_store = zarr.storage.ZipStore(str(zip_target), mode="w")
-        should_close = True
-
-    # Copy every key from MemoryStore to ZipStore exactly once.
-    # ZipStore has no __setitem__; writes go through the async set() method.
-    # zarr.core.sync.sync is the same utility zarr uses for its own sync API.
-    from zarr.core.sync import sync as _zarr_sync
-
-    async def _bulk_copy() -> None:
-        for key, value in mem_store._store_dict.items():
-            await zip_store.set(key, value)
-
-    _zarr_sync(_bulk_copy())
-
-    if should_close:
-        zip_store.close()
