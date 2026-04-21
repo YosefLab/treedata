@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import anndata as ad
+import awkward as ak
 import h5py
 import networkx as nx
 import numpy as np
@@ -60,9 +61,43 @@ def _digraph_to_dict(G: nx.DiGraph) -> dict:
 
 
 def _serialize_axis_trees(trees: AxisTrees) -> str:
-    """Serialize AxisTrees."""
+    """Serialize AxisTrees to a JSON string (used for HDF5)."""
     d = {k: _digraph_to_dict(v) for k, v in trees.items()}
     return json.dumps(_make_serializable(d))
+
+
+def _write_axis_trees_zarr(f: zarr.Group, key: str, trees: AxisTrees) -> None:
+    """Write AxisTrees to zarr using columnar awkward arrays (one array per attribute key).
+
+    Stores each DiGraph as a subgroup with separate arrays for node IDs, edge
+    pairs, and per-attribute columns. Each attribute column is an awkward array
+    built with ak.from_iter, which preserves native types (float64, int64,
+    var * string, etc.) without JSON encoding.
+    """
+    g = f.require_group(key)
+    for name, G in trees.items():
+        tg = g.require_group(str(name))
+        nodes = [str(n) for n in G.nodes()]
+        edges = [(str(u), str(v)) for u, v in G.edges()]
+        _write_elem(tg, "nodes", np.array(nodes, dtype=object), dataset_kwargs={})
+        edge_arr = np.array(edges, dtype=object) if edges else np.zeros((0, 2), dtype=object)
+        _write_elem(tg, "edges", edge_arr, dataset_kwargs={})
+        node_attr_keys = {k for n in G.nodes() for k in G.nodes[n]}
+        if node_attr_keys:
+            _write_elem(
+                tg,
+                "node_attrs",
+                {k: ak.from_iter([_make_serializable(G.nodes[n].get(k)) for n in G.nodes()]) for k in node_attr_keys},
+                dataset_kwargs={},
+            )
+        edge_attr_keys = {k for u, v in G.edges() for k in G[u][v]}
+        if edge_attr_keys:
+            _write_elem(
+                tg,
+                "edge_attrs",
+                {k: ak.from_iter([_make_serializable(G[u][v].get(k)) for u, v in G.edges()]) for k in edge_attr_keys},
+                dataset_kwargs={},
+            )
 
 
 def _write_tdata(f, tdata, filename, chunks=None, **kwargs) -> None:
@@ -84,7 +119,10 @@ def _write_tdata(f, tdata, filename, chunks=None, **kwargs) -> None:
         _write_elem(f, key, dict(getattr(tdata, key)), dataset_kwargs=kwargs)
     # Write axis tree elements
     for key in ["obst", "vart"]:
-        _write_elem(f, key, _serialize_axis_trees(getattr(tdata, key)), dataset_kwargs=kwargs)
+        if isinstance(f, zarr.Group):
+            _write_axis_trees_zarr(f, key, getattr(tdata, key))
+        else:
+            _write_elem(f, key, _serialize_axis_trees(getattr(tdata, key)), dataset_kwargs=kwargs)
     # Write raw
     if tdata.raw is not None:
         tdata.strings_to_categoricals(tdata.raw.var)
@@ -177,6 +215,52 @@ def _close_zarr_group(group: zarr.Group) -> None:
             close()
 
 
+def _is_zip_store(store: Any) -> bool:
+    """Return True if store is or resolves to a zarr ZipStore."""
+    if ZARR_V2:
+        return False
+    return isinstance(store, zarr.storage.ZipStore) or (
+        isinstance(store, (str, PathLike)) and str(store).endswith(".zip")
+    )
+
+
+def _write_zarr_via_memory(
+    zip_target: zarr.storage.ZipStore | PathLike | str,
+    tdata: TreeData,
+    chunks: tuple[int, ...] | None,
+    **kwargs: Any,
+) -> None:
+    """Write to a ZipStore via an intermediate MemoryStore.
+
+    zarr v3's ZipStore is append-only: every metadata update appends a new
+    zarr.json entry, producing duplicate-name warnings. Writing to MemoryStore
+    first (which supports overwriting) and then bulk-copying the final state to
+    the ZipStore ensures each key is written exactly once.
+    """
+    mem_store = zarr.storage.MemoryStore()
+    f = zarr.open_group(mem_store, mode="w", zarr_format=3)
+    _write_tdata(f, tdata, zip_target, chunks, **kwargs)
+
+    if isinstance(zip_target, zarr.storage.ZipStore):
+        zip_store = zip_target
+        should_close = False
+    else:
+        zip_store = zarr.storage.ZipStore(str(zip_target), mode="w")
+        should_close = True
+
+    # ZipStore has no __setitem__; writes go through the async set() method.
+    from zarr.core.sync import sync as _zarr_sync
+
+    async def _bulk_copy() -> None:
+        for key, value in mem_store._store_dict.items():
+            await zip_store.set(key, value)
+
+    _zarr_sync(_bulk_copy())
+
+    if should_close:
+        zip_store.close()
+
+
 def write_zarr(
     filename: MutableMapping | PathLike | zarr.Group, tdata: TreeData, chunks: tuple[int, ...] | None = None, **kwargs
 ) -> None:
@@ -191,11 +275,10 @@ def write_zarr(
     kwargs
         Additional keyword arguments passed to :func:`zarr.save`.
     """
-    # if not ZARR_V2 and "zarr_format" not in kwargs:
-    #    f = zarr.open(store=filename, mode="w", zarr_format=3)
-    # else:
-    print(kwargs)
-    f, should_close = _open_zarr_group(filename)
-    _write_tdata(f, tdata, filename, chunks, **kwargs)
-    if should_close:
-        _close_zarr_group(f)
+    if _is_zip_store(filename):
+        _write_zarr_via_memory(filename, tdata, chunks, **kwargs)
+    else:
+        f, should_close = _open_zarr_group(filename)
+        _write_tdata(f, tdata, filename, chunks, **kwargs)
+        if should_close:
+            _close_zarr_group(f)

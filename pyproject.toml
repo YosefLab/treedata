@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "treedata"
-version = "0.2.5"
+version = "0.2.6"
 description = "anndata with trees"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -24,6 +24,7 @@ classifiers = [
 ]
 dependencies = [
   "anndata>=0.11",
+  "awkward>=2",
   "h5py",
   "networkx",
   "numpy",

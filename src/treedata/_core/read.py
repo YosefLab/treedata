@@ -4,18 +4,17 @@ import json
 import warnings
 from collections.abc import MutableMapping
 from importlib.metadata import version as get_version
-from typing import TYPE_CHECKING, Literal
+from os import PathLike
+from typing import Literal
 
 import anndata as ad
+import awkward as ak
 import h5py
 import networkx as nx
 import zarr
 from packaging import version
 
 from treedata._core.treedata import TreeData
-
-if TYPE_CHECKING:
-    from os import PathLike
 
 ANNDATA_VERSION = version.parse(get_version("anndata"))
 USE_EXPERIMENTAL = ANNDATA_VERSION < version.parse("0.11.0")
@@ -43,8 +42,46 @@ def _dict_to_digraph(graph_dict: dict) -> nx.DiGraph:
 
 
 def _parse_axis_trees(data: str) -> dict:
-    """Parse AxisTrees from a string."""
+    """Parse AxisTrees from a JSON string (HDF5 format)."""
     return {k: _dict_to_digraph(v) for k, v in json.loads(data).items()}
+
+
+def _decode_attr_column(arr) -> list:
+    """Decode an attribute column to a Python list.
+
+    Handles both awkward arrays (new format) and JSON-string numpy arrays (legacy format).
+    """
+    if isinstance(arr, ak.Array):
+        return arr.to_list()
+    return [json.loads(v) for v in arr]
+
+
+def _read_axis_trees_zarr(g: zarr.Group) -> dict:
+    """Read AxisTrees from a zarr group written in columnar format.
+
+    None values are dropped when reconstructing node/edge attribute dicts,
+    matching networkx semantics where an absent attribute differs from None.
+    """
+    trees = {}
+    for name in g.keys():
+        tg = g[name]
+        if not isinstance(tg, zarr.Group):
+            continue
+        G = nx.DiGraph()
+        nodes = list(_read_elem(tg["nodes"]))
+        node_attrs: dict[str, list] = {}
+        if "node_attrs" in tg:
+            node_attrs = {k: _decode_attr_column(v) for k, v in _read_elem(tg["node_attrs"]).items()}
+        for i, node in enumerate(nodes):
+            G.add_node(node, **{k: v[i] for k, v in node_attrs.items() if v[i] is not None})
+        edges = _read_elem(tg["edges"])
+        edge_attrs: dict[str, list] = {}
+        if "edge_attrs" in tg:
+            edge_attrs = {k: _decode_attr_column(v) for k, v in _read_elem(tg["edge_attrs"]).items()}
+        for i, (src, dst) in enumerate(edges):
+            G.add_edge(src, dst, **{k: v[i] for k, v in edge_attrs.items() if v[i] is not None})
+        trees[name] = G
+    return trees
 
 
 def _parse_legacy(treedata_attrs: dict) -> dict:
@@ -92,7 +129,11 @@ def _read_tdata(f, filename, backed) -> dict:
     # Read axis tree elements
     for k in ["obst", "vart"]:
         if k in f:
-            d[k] = _parse_axis_trees(_read_elem(f[k]))
+            elem = f[k]
+            if isinstance(elem, zarr.Group):
+                d[k] = _read_axis_trees_zarr(elem)
+            else:
+                d[k] = _parse_axis_trees(_read_elem(elem))
     # Read legacy treedata format
     if "raw.treedata" in f:
         d.update(_parse_legacy(json.loads(_read_elem(f["raw.treedata"]))))
@@ -148,6 +189,9 @@ def _open_zarr_group(store, *, mode: str = "r") -> tuple[zarr.Group, bool]:
     """Open a Zarr group and signal whether it should be closed."""
     if isinstance(store, zarr.Group):
         return store, False
+    # zarr v3 does not auto-detect zip files from string paths; open explicitly
+    if isinstance(store, (str, PathLike)) and str(store).endswith(".zip"):
+        store = zarr.storage.ZipStore(store, mode=mode)
     return zarr.open(store, mode=mode), True
 
 
