@@ -423,7 +423,10 @@ class TreeData(ad.AnnData):
             if key in kwargs:
                 new[key] = kwargs[key]
             else:
-                new[key] = getattr(self, key).copy()
+                val = getattr(self, key).copy()
+                if key == "layers":
+                    val.pop(None, None)  # X is passed via X=; don't duplicate in layers
+                new[key] = val
         if "X" in kwargs:
             new["X"] = kwargs["X"]
         elif self._has_X():
