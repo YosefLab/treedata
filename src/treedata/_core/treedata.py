@@ -58,6 +58,9 @@ class TreeData(ad.AnnData):
         Key-indexed :class:`~networkx.DiGraph` trees leaf nodes in the variables axis.
     layers
         Key-indexed multi-dimensional arrays aligned to dimensions of `X`.
+    dtype
+        .. deprecated::
+            The dtype argument is deprecated and will be removed in a future version.
     shape
         Shape tuple (#observations, #variables). Can only be provided if `X` is `None`.
     filename
@@ -81,15 +84,16 @@ class TreeData(ad.AnnData):
 
     def __init__(
         self,
-        X: np.ndarray | sparse.spmatrix | pd.DataFrame | None = None,
+        X: np.ndarray | sparse.spmatrix | sparse.sparray | pd.DataFrame | None = None,
         obs: pd.DataFrame | Mapping[str, Iterable[Any]] | None = None,
         var: pd.DataFrame | Mapping[str, Iterable[Any]] | None = None,
         uns: Mapping[str, Any] | None = None,
+        *,
         obsm: np.ndarray | Mapping[str, Sequence[Any]] | None = None,
         obst: Mapping[str, nx.DiGraph] | None = None,
         varm: np.ndarray | Mapping[str, Sequence[Any]] | None = None,
         vart: Mapping[str, nx.DiGraph] | None = None,
-        layers: Mapping[str, np.ndarray | sparse.spmatrix] | None = None,
+        layers: Mapping[str, np.ndarray | sparse.spmatrix | sparse.sparray] | None = None,
         raw: Mapping[str, Any] | None = None,
         dtype: np.dtype | type | str | None = None,
         shape: tuple[int, int] | None = None,
@@ -99,12 +103,17 @@ class TreeData(ad.AnnData):
         label: str | None = "tree",
         alignment: Literal["leaves", "nodes", "subset"] = "leaves",
         allow_overlap: bool = True,
-        *,
         obsp: np.ndarray | Mapping[str, Sequence[Any]] | None = None,
         varp: np.ndarray | Mapping[str, Sequence[Any]] | None = None,
         oidx: Index1D | None = None,
         vidx: Index1D | None = None,
     ):
+        if dtype is not None:
+            warnings.warn(
+                "The dtype argument is deprecated and will be removed in a future version.",
+                FutureWarning,
+                stacklevel=2,
+            )
         if asview:
             if not isinstance(X, TreeData):
                 raise ValueError("If asview is True, X has to be an TreeData object")
@@ -123,7 +132,6 @@ class TreeData(ad.AnnData):
                 vart=vart,
                 raw=raw,
                 layers=layers,
-                dtype=dtype,
                 shape=shape,
                 filename=filename,
                 filemode=filemode,
@@ -146,7 +154,6 @@ class TreeData(ad.AnnData):
         vart=None,
         raw=None,
         layers=None,
-        dtype=None,
         shape=None,
         filename=None,
         filemode=None,
@@ -171,7 +178,6 @@ class TreeData(ad.AnnData):
             obsp=obsp,
             raw=raw,
             layers=layers,
-            dtype=dtype,
             shape=shape,
             filename=filename,
             filemode=filemode,
