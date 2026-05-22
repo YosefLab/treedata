@@ -383,6 +383,8 @@ class TreeData(ad.AnnData):
         descr = f"TreeData object with n_obs × n_vars = {n_obs} × {n_vars}{backed_at}"
         for attr in ["obs", "var", "uns", "obsm", "varm", "layers", "obsp", "varp", "obst", "vart"]:
             keys = getattr(self, attr).keys()
+            if attr == "layers":
+                keys = [k for k in keys if k is not None]
             if len(keys) > 0:
                 descr += f"\n    {attr}: {str(list(keys))[1:-1]}"
         return descr
