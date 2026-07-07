@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any, Literal
 
 import anndata as ad
-import awkward as ak
 import h5py
 import networkx as nx
 import numpy as np
@@ -23,6 +22,9 @@ from treedata._core.treedata import TreeData
 ANNDATA_VERSION = version.parse(get_version("anndata"))
 USE_EXPERIMENTAL = ANNDATA_VERSION < version.parse("0.11.0")
 ZARR_V2 = version.parse(get_version("zarr")) < version.parse("3.0.0")
+
+# Sentinel distinguishing an absent attribute from an attribute explicitly set to ``None``.
+_MISSING = object()
 
 
 def _make_serializable(data: Any) -> Any:
@@ -66,38 +68,63 @@ def _serialize_axis_trees(trees: AxisTrees) -> str:
     return json.dumps(_make_serializable(d))
 
 
-def _write_axis_trees_zarr(f: zarr.Group, key: str, trees: AxisTrees) -> None:
-    """Write AxisTrees to zarr using columnar awkward arrays (one array per attribute key).
+def _encode_attr_column(values: list) -> np.ndarray:
+    """Encode one attribute column (values in node/edge order) as a 1-D array.
 
-    Stores each DiGraph as a subgroup with separate arrays for node IDs, edge
-    pairs, and per-attribute columns. Each attribute column is an awkward array
-    built with ak.from_iter, which preserves native types (float64, int64,
-    var * string, etc.) without JSON encoding.
+    A column is stored with a native numpy dtype when it is *dense* (every
+    node/edge has the attribute) and every value is a scalar of a single
+    numeric or boolean Python type. This keeps the common case (e.g. ``depth``,
+    ``time``, branch ``length``) compact and typed.
+
+    Otherwise — ragged values (``list``/``set``/``np.ndarray``/nested), mixed
+    types, string values, sparse columns, or explicit ``None`` — the column
+    falls back to an object array of per-element JSON strings. The empty string
+    ``""`` is reserved as the "attribute absent" marker, so an attribute
+    explicitly set to ``None`` (stored as JSON ``"null"``) is preserved and kept
+    distinct from a missing attribute.
+
+    The number of attribute keys is expected to be small, so this stores only a
+    handful of arrays per tree — object count scales with the number of keys,
+    never with the number of nodes/edges.
     """
+    dense = all(v is not _MISSING for v in values)
+    serialized = [v if v is _MISSING else _make_serializable(v) for v in values]
+    present_types = {type(v) for v in serialized if v is not _MISSING}
+    # Native path: dense column of a single numeric/bool Python type.
+    if dense and len(present_types) == 1 and next(iter(present_types)) in (int, float, bool):
+        return np.array(serialized)
+    return np.array(["" if v is _MISSING else json.dumps(v) for v in serialized], dtype=object)
+
+
+def _write_axis_trees_zarr(f: zarr.Group, key: str, trees: AxisTrees) -> None:
+    """Write AxisTrees to zarr in a columnar layout (one array per attribute key).
+
+    Each ``DiGraph`` is stored as a subgroup with separate arrays for node IDs,
+    edge pairs, and per-attribute columns (see :func:`_encode_attr_column`).
+    This avoids the previous single-JSON-scalar format, which zarr v3 could not
+    store above a size limit and which crashed on large trees.
+    """
+    # Remove any previously written trees so the persisted set matches ``trees``
+    # exactly (e.g. when rewriting into an existing group).
+    if key in f:
+        del f[key]
     g = f.require_group(key)
     for name, G in trees.items():
         tg = g.require_group(str(name))
-        nodes = [str(n) for n in G.nodes()]
-        edges = [(str(u), str(v)) for u, v in G.edges()]
-        _write_elem(tg, "nodes", np.array(nodes, dtype=object), dataset_kwargs={})
-        edge_arr = np.array(edges, dtype=object) if edges else np.zeros((0, 2), dtype=object)
-        _write_elem(tg, "edges", edge_arr, dataset_kwargs={})
-        node_attr_keys = {k for n in G.nodes() for k in G.nodes[n]}
+        nodes = list(G.nodes())
+        edges = list(G.edges())
+        node_ids = np.array([str(n) for n in nodes], dtype=object)
+        edge_ids = np.array([(str(u), str(v)) for u, v in edges], dtype=object) if edges else np.zeros((0, 2), object)
+        _write_elem(tg, "nodes", node_ids, dataset_kwargs={})
+        _write_elem(tg, "edges", edge_ids, dataset_kwargs={})
+        node_attr_keys = {k for n in nodes for k in G.nodes[n]}
         if node_attr_keys:
-            _write_elem(
-                tg,
-                "node_attrs",
-                {k: ak.from_iter([_make_serializable(G.nodes[n].get(k)) for n in G.nodes()]) for k in node_attr_keys},
-                dataset_kwargs={},
-            )
-        edge_attr_keys = {k for u, v in G.edges() for k in G[u][v]}
+            cols = {k: _encode_attr_column([G.nodes[n].get(k, _MISSING) for n in nodes]) for k in node_attr_keys}
+            _write_elem(tg, "node_attrs", cols, dataset_kwargs={})
+        edge_attr_keys = {k for u, v in edges for k in G[u][v]}
         if edge_attr_keys:
-            _write_elem(
-                tg,
-                "edge_attrs",
-                {k: ak.from_iter([_make_serializable(G[u][v].get(k)) for u, v in G.edges()]) for k in edge_attr_keys},
-                dataset_kwargs={},
-            )
+            cols = {k: _encode_attr_column([G[u][v].get(k, _MISSING) for u, v in edges]) for k in edge_attr_keys}
+            _write_elem(tg, "edge_attrs", cols, dataset_kwargs={})
 
 
 def _write_tdata(f, tdata, filename, chunks=None, **kwargs) -> None:

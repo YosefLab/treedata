@@ -200,6 +200,57 @@ def test_zarr_large_tree(tmp_path):
     assert G["0"]["1"]["meta"] == [0, 1]
 
 
+def test_zarr_explicit_none(tmp_path):
+    """An attribute explicitly set to None is preserved and kept distinct from a missing one."""
+    tree = nx.DiGraph()
+    tree.add_nodes_from(["root", "A", "B"])
+    tree.add_edges_from([("root", "A"), ("root", "B")])
+    tree.nodes["root"]["value"] = None  # explicit None
+    tree.nodes["A"]["value"] = 1
+    # B has no "value" attribute at all
+    tree["root"]["A"]["weight"] = None  # explicit None on an edge
+    tdata = td.TreeData(np.eye(3), obst={"t": tree}, alignment="subset")
+    tdata.write_zarr(tmp_path / "test.zarr")
+    G = td.read_zarr(tmp_path / "test.zarr").obst["t"]
+    assert "value" in G.nodes["root"] and G.nodes["root"]["value"] is None
+    assert G.nodes["A"]["value"] == 1
+    assert "value" not in G.nodes["B"]
+    assert "weight" in G["root"]["A"] and G["root"]["A"]["weight"] is None
+
+
+def test_zarr_native_dtype_storage(tmp_path):
+    """Dense scalar numeric/bool columns are stored with a native (non-JSON) dtype."""
+    import zarr
+
+    tree = nx.DiGraph()
+    tree.add_edges_from([("root", "A"), ("root", "B")])
+    for i, node in enumerate(tree.nodes()):
+        tree.nodes[node]["depth"] = i  # dense int column -> native
+        tree.nodes[node]["ragged"] = [i, i]  # ragged column -> JSON
+    tdata = td.TreeData(np.eye(3), obst={"t": tree}, alignment="subset")
+    tdata.write_zarr(tmp_path / "test.zarr")
+    g = zarr.open(str(tmp_path / "test.zarr"), mode="r")
+    assert g["obst/t/node_attrs/depth"].dtype.kind in "iu"  # stored as native integers
+    assert g["obst/t/node_attrs/ragged"].dtype.kind not in "iufb"  # stored as JSON strings
+    G = td.read_zarr(tmp_path / "test.zarr").obst["t"]
+    assert G.nodes["root"]["depth"] == 0 and isinstance(G.nodes["root"]["depth"], int)
+    assert G.nodes["A"]["ragged"] == [1, 1]
+
+
+def test_zarr_stale_tree_removed(tdata, tmp_path):
+    """Rewriting into an existing group drops trees no longer present in the object."""
+    import zarr
+
+    store_path = str(tmp_path / "test.zarr")
+    tdata.write_zarr(store_path)
+    assert set(td.read_zarr(store_path).obst.keys()) == {"1", "2"}
+    # Rewrite into the same store with one obst tree removed
+    del tdata.obst["2"]
+    group = zarr.open(store_path, mode="a")
+    tdata.write_zarr(group)
+    assert set(td.read_zarr(store_path).obst.keys()) == {"1"}
+
+
 def test_read_anndata(X, tmp_path):
     adata = ad.AnnData(X)
     file_path = tmp_path / "test.h5ad"

@@ -14,6 +14,8 @@ notebooks/concatenation
 
 notebooks/alignment
 
+fileformat.md
+
 changelog.md
 contributing.md
 references.md

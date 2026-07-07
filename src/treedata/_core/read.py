@@ -8,7 +8,6 @@ from os import PathLike
 from typing import Literal
 
 import anndata as ad
-import awkward as ak
 import h5py
 import networkx as nx
 import zarr
@@ -18,6 +17,9 @@ from treedata._core.treedata import TreeData
 
 ANNDATA_VERSION = version.parse(get_version("anndata"))
 USE_EXPERIMENTAL = ANNDATA_VERSION < version.parse("0.11.0")
+
+# Sentinel distinguishing an absent attribute from an attribute explicitly set to ``None``.
+_MISSING = object()
 
 
 def _read_elem(elem):
@@ -46,22 +48,27 @@ def _parse_axis_trees(data: str) -> dict:
     return {k: _dict_to_digraph(v) for k, v in json.loads(data).items()}
 
 
-def _decode_attr_column(arr) -> list:
-    """Decode an attribute column to a Python list.
+def _decode_attr_columns(cols: dict) -> dict[str, list]:
+    """Decode columnar attribute arrays into per-element Python lists.
 
-    Handles both awkward arrays (new format) and JSON-string numpy arrays (legacy format).
+    Native numeric/bool arrays are returned as-is (every element present).
+    Object arrays hold per-element JSON strings, where the empty string ``""``
+    marks an absent attribute; it is decoded to the :data:`_MISSING` sentinel so
+    that an attribute explicitly set to ``None`` (JSON ``"null"``) is preserved
+    and kept distinct from a missing attribute.
     """
-    if isinstance(arr, ak.Array):
-        return arr.to_list()
-    return [json.loads(v) for v in arr]
+    decoded: dict[str, list] = {}
+    for k, arr in cols.items():
+        dtype = getattr(arr, "dtype", None)
+        if dtype is not None and dtype.kind in "iufb":
+            decoded[k] = list(arr.tolist())
+        else:
+            decoded[k] = [_MISSING if s == "" else json.loads(s) for s in arr]
+    return decoded
 
 
 def _read_axis_trees_zarr(g: zarr.Group) -> dict:
-    """Read AxisTrees from a zarr group written in columnar format.
-
-    None values are dropped when reconstructing node/edge attribute dicts,
-    matching networkx semantics where an absent attribute differs from None.
-    """
+    """Read AxisTrees from a zarr group written in the columnar format."""
     trees = {}
     for name in g.keys():
         tg = g[name]
@@ -69,17 +76,13 @@ def _read_axis_trees_zarr(g: zarr.Group) -> dict:
             continue
         G = nx.DiGraph()
         nodes = list(_read_elem(tg["nodes"]))
-        node_attrs: dict[str, list] = {}
-        if "node_attrs" in tg:
-            node_attrs = {k: _decode_attr_column(v) for k, v in _read_elem(tg["node_attrs"]).items()}
+        node_attrs = _decode_attr_columns(_read_elem(tg["node_attrs"])) if "node_attrs" in tg else {}
         for i, node in enumerate(nodes):
-            G.add_node(node, **{k: v[i] for k, v in node_attrs.items() if v[i] is not None})
+            G.add_node(node, **{k: col[i] for k, col in node_attrs.items() if col[i] is not _MISSING})
         edges = _read_elem(tg["edges"])
-        edge_attrs: dict[str, list] = {}
-        if "edge_attrs" in tg:
-            edge_attrs = {k: _decode_attr_column(v) for k, v in _read_elem(tg["edge_attrs"]).items()}
+        edge_attrs = _decode_attr_columns(_read_elem(tg["edge_attrs"])) if "edge_attrs" in tg else {}
         for i, (src, dst) in enumerate(edges):
-            G.add_edge(src, dst, **{k: v[i] for k, v in edge_attrs.items() if v[i] is not None})
+            G.add_edge(src, dst, **{k: col[i] for k, col in edge_attrs.items() if col[i] is not _MISSING})
         trees[name] = G
     return trees
 

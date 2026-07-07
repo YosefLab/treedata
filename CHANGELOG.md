@@ -14,7 +14,14 @@ and this project adheres to [Semantic Versioning][].
 
 ### Changed
 
+- Zarr writes now store `obst`/`vart` in a columnar layout (one array per node/edge attribute key) instead of a single JSON scalar. Dense numeric/boolean columns use native dtypes; ragged or complex columns fall back to per-element JSON. This fixes a `TypeError: string too large to store inside array` crash when writing large trees to zarr v3 (#86)
+
 ### Fixed
+
+- Fixed `UserWarning: Duplicate name: 'zarr.json'` spam when writing to a zarr `ZipStore` by staging the write in a `MemoryStore` and copying to the `ZipStore` once (#86)
+- `read_zarr` now auto-detects `.zip` paths and opens them as a `ZipStore` (#86)
+- Node/edge attributes explicitly set to `None` are now preserved through a zarr round-trip and kept distinct from absent attributes (#86)
+- Rewriting into an existing zarr group now removes trees that are no longer present, so the persisted tree set matches the `TreeData` being written (#86)
 
 ## [0.2.4] - 2025-11-05
 
