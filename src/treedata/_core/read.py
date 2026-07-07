@@ -4,7 +4,8 @@ import json
 import warnings
 from collections.abc import MutableMapping
 from importlib.metadata import version as get_version
-from typing import TYPE_CHECKING, Literal
+from os import PathLike
+from typing import Literal
 
 import anndata as ad
 import h5py
@@ -14,11 +15,11 @@ from packaging import version
 
 from treedata._core.treedata import TreeData
 
-if TYPE_CHECKING:
-    from os import PathLike
-
 ANNDATA_VERSION = version.parse(get_version("anndata"))
 USE_EXPERIMENTAL = ANNDATA_VERSION < version.parse("0.11.0")
+
+# Sentinel distinguishing an absent attribute from an attribute explicitly set to ``None``.
+_MISSING = object()
 
 
 def _read_elem(elem):
@@ -43,8 +44,47 @@ def _dict_to_digraph(graph_dict: dict) -> nx.DiGraph:
 
 
 def _parse_axis_trees(data: str) -> dict:
-    """Parse AxisTrees from a string."""
+    """Parse AxisTrees from a JSON string (HDF5 format)."""
     return {k: _dict_to_digraph(v) for k, v in json.loads(data).items()}
+
+
+def _decode_attr_columns(cols: dict) -> dict[str, list]:
+    """Decode columnar attribute arrays into per-element Python lists.
+
+    Native numeric/bool arrays are returned as-is (every element present).
+    Object arrays hold per-element JSON strings, where the empty string ``""``
+    marks an absent attribute; it is decoded to the :data:`_MISSING` sentinel so
+    that an attribute explicitly set to ``None`` (JSON ``"null"``) is preserved
+    and kept distinct from a missing attribute.
+    """
+    decoded: dict[str, list] = {}
+    for k, arr in cols.items():
+        dtype = getattr(arr, "dtype", None)
+        if dtype is not None and dtype.kind in "iufb":
+            decoded[k] = list(arr.tolist())
+        else:
+            decoded[k] = [_MISSING if s == "" else json.loads(s) for s in arr]
+    return decoded
+
+
+def _read_axis_trees_zarr(g: zarr.Group) -> dict:
+    """Read AxisTrees from a zarr group written in the columnar format."""
+    trees = {}
+    for name in g.keys():
+        tg = g[name]
+        if not isinstance(tg, zarr.Group):
+            continue
+        G = nx.DiGraph()
+        nodes = list(_read_elem(tg["nodes"]))
+        node_attrs = _decode_attr_columns(_read_elem(tg["node_attrs"])) if "node_attrs" in tg else {}
+        for i, node in enumerate(nodes):
+            G.add_node(node, **{k: col[i] for k, col in node_attrs.items() if col[i] is not _MISSING})
+        edges = _read_elem(tg["edges"])
+        edge_attrs = _decode_attr_columns(_read_elem(tg["edge_attrs"])) if "edge_attrs" in tg else {}
+        for i, (src, dst) in enumerate(edges):
+            G.add_edge(src, dst, **{k: col[i] for k, col in edge_attrs.items() if col[i] is not _MISSING})
+        trees[name] = G
+    return trees
 
 
 def _parse_legacy(treedata_attrs: dict) -> dict:
@@ -92,7 +132,11 @@ def _read_tdata(f, filename, backed) -> dict:
     # Read axis tree elements
     for k in ["obst", "vart"]:
         if k in f:
-            d[k] = _parse_axis_trees(_read_elem(f[k]))
+            elem = f[k]
+            if isinstance(elem, zarr.Group):
+                d[k] = _read_axis_trees_zarr(elem)
+            else:
+                d[k] = _parse_axis_trees(_read_elem(elem))
     # Read legacy treedata format
     if "raw.treedata" in f:
         d.update(_parse_legacy(json.loads(_read_elem(f["raw.treedata"]))))
@@ -148,6 +192,9 @@ def _open_zarr_group(store, *, mode: str = "r") -> tuple[zarr.Group, bool]:
     """Open a Zarr group and signal whether it should be closed."""
     if isinstance(store, zarr.Group):
         return store, False
+    # zarr v3 does not auto-detect zip files from string paths; open explicitly
+    if isinstance(store, (str, PathLike)) and str(store).endswith(".zip"):
+        store = zarr.storage.ZipStore(store, mode=mode)
     return zarr.open(store, mode=mode), True
 
 
