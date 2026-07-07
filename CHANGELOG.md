@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning][].
 - `read_zarr` now auto-detects `.zip` paths and opens them as a `ZipStore` (#86)
 - Node/edge attributes explicitly set to `None` are now preserved through a zarr round-trip and kept distinct from absent attributes (#86)
 - Rewriting into an existing zarr group now removes trees that are no longer present, so the persisted tree set matches the `TreeData` being written (#86)
+- `dtype` parameter in `TreeData.__init__` is now deprecated; passing it raises a `FutureWarning` and has no effect, matching anndata's removal of this argument
+- `obsm`, `varm`, `layers`, `raw`, `shape`, `filename`, `filemode`, `asview`, and related parameters in `TreeData.__init__` are now keyword-only, matching the anndata 0.13.x API
+- Fixed compatibility with anndata 0.13.x: removed `dtype` from internal `_init_as_actual` call, which was removed from AnnData in 0.13.x
+- Fixed compatibility with anndata 0.13.x "Unify X and layers" change: `layers.copy()` and `dict(layers)` no longer include the internal `None` key (used to store X) in `_mutated_copy` and write routines
+- Fixed repr incorrectly showing `layers: None` when anndata 0.13.x stores X as `layers[None]`
 
 ## [0.2.4] - 2025-11-05
 

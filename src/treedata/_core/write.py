@@ -142,8 +142,10 @@ def _write_tdata(f, tdata, filename, chunks=None, **kwargs) -> None:
     for key in ["obs", "var", "label", "allow_overlap", "alignment"]:
         _write_elem(f, key, getattr(tdata, key), dataset_kwargs=kwargs)
     # Write group elements
-    for key in ["obsm", "varm", "obsp", "varp", "layers", "uns"]:
+    for key in ["obsm", "varm", "obsp", "varp", "uns"]:
         _write_elem(f, key, dict(getattr(tdata, key)), dataset_kwargs=kwargs)
+    # Write layers without X (X is written separately above; None key added in anndata 0.13.x)
+    _write_elem(f, "layers", {k: v for k, v in tdata.layers.items() if k is not None}, dataset_kwargs=kwargs)
     # Write axis tree elements
     for key in ["obst", "vart"]:
         if isinstance(f, zarr.Group):
