@@ -16,12 +16,15 @@ and this project adheres to [Semantic Versioning][].
 
 ### Fixed
 
-## [0.3.0] - 2026-07-07
+
+## [0.3.0] - 2026-07-08
 
 ### Added
 
 ### Changed
 
+- Require `anndata>=0.13` (and consequently Python `>=3.12`, which anndata 0.13 requires) (#88)
+- Require `zarr>=3` (anndata 0.13 no longer supports zarr <3). Removed the dead `zarr<3` (`ZARR_V2`) code branches and the dead `anndata<0.11` (`USE_EXPERIMENTAL`) code branches now that the supported floors exceed them  (#88)
 - Zarr writes now store `obst`/`vart` in a columnar layout (one array per node/edge attribute key) instead of a single JSON scalar. Dense numeric/boolean columns use native dtypes; ragged or complex columns fall back to per-element JSON. This fixes a `TypeError: string too large to store inside array` crash when writing large trees to zarr v3 (#86)
 - `dtype` parameter in `TreeData.__init__` is now deprecated; passing it raises a `FutureWarning` and has no effect, matching anndata's removal of this argument
 - `obsm`, `varm`, `layers`, `raw`, `shape`, `filename`, `filemode`, `asview`, and related parameters in `TreeData.__init__` are now keyword-only, matching the anndata 0.13.x API
@@ -30,6 +33,7 @@ and this project adheres to [Semantic Versioning][].
 
 ### Fixed
 
+- `TreeData.__getitem__` now delegates `anndata.acc` accessor indexers (`AdRef`, `MapAcc`, `RefAcc`) to `AnnData.__getitem__` instead of routing them through `_normalize_indices`. This fixes an `IndexError: Unknown indexer` from `obs_vector`/`var_vector` (and any `var_names`/layer column lookup) under anndata ≥ 0.13 (#88)
 - Fixed `UserWarning: Duplicate name: 'zarr.json'` spam when writing to a zarr `ZipStore` by staging the write in a `MemoryStore` and copying to the `ZipStore` once (#86)
 - `read_zarr` now auto-detects `.zip` paths and opens them as a `ZipStore` (#86)
 - Node/edge attributes explicitly set to `None` are now preserved through a zarr round-trip and kept distinct from absent attributes (#86)

@@ -14,16 +14,15 @@ maintainers = [
 authors = [
   { name = "William Colgan" },
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-  "anndata>=0.11",
+  "anndata>=0.13",
   "h5py",
   "networkx",
   "numpy",
@@ -31,7 +30,7 @@ dependencies = [
   "pandas",
   "pyarrow",
   "session-info2",
-  "zarr>=2",
+  "zarr>=3",
 ]
 urls.Documentation = "https://treedata.readthedocs.io/"
 urls.Homepage = "https://github.com/colganwi/treedata"
@@ -76,7 +75,7 @@ envs.docs.scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
 envs.docs.dependency-groups = [ "doc" ]
 envs.hatch-test.matrix = [
   # Test the lowest and highest supported Python versions with normal deps
-  { deps = [ "stable" ], python = [ "3.11", "3.14" ] },
+  { deps = [ "stable" ], python = [ "3.12", "3.14" ] },
   # Test the newest supported Python version also with pre-release deps
   { deps = [ "pre" ], python = [ "3.14" ] },
 ]

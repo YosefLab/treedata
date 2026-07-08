@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import warnings
 from collections.abc import MutableMapping
-from importlib.metadata import version as get_version
 from os import PathLike
 from pathlib import Path
 from typing import Any, Literal
@@ -14,14 +13,9 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import zarr
-from packaging import version
 
 from treedata._core.aligned_mapping import AxisTrees
 from treedata._core.treedata import TreeData
-
-ANNDATA_VERSION = version.parse(get_version("anndata"))
-USE_EXPERIMENTAL = ANNDATA_VERSION < version.parse("0.11.0")
-ZARR_V2 = version.parse(get_version("zarr")) < version.parse("3.0.0")
 
 # Sentinel distinguishing an absent attribute from an attribute explicitly set to ``None``.
 _MISSING = object()
@@ -45,10 +39,7 @@ def _make_serializable(data: Any) -> Any:
 
 def _write_elem(f, k, elem, *, dataset_kwargs) -> None:
     """Write an element to a storage group using anndata encoding."""
-    if USE_EXPERIMENTAL:
-        ad.experimental.write_elem(f, k, elem, dataset_kwargs=dataset_kwargs)
-    else:
-        ad.io.write_elem(f, k, elem, dataset_kwargs=dataset_kwargs)
+    ad.io.write_elem(f, k, elem, dataset_kwargs=dataset_kwargs)
 
 
 def _digraph_to_dict(G: nx.DiGraph) -> dict:
@@ -229,10 +220,7 @@ def _open_zarr_group(
     """Open a Zarr group for writing and indicate ownership."""
     if isinstance(store, zarr.Group):
         return store, False
-    group_kwargs: dict[str, int] = {}
-    if not ZARR_V2:
-        group_kwargs["zarr_format"] = 3
-    return zarr.open_group(store, mode=mode, **group_kwargs), True
+    return zarr.open_group(store, mode=mode, zarr_format=3), True
 
 
 def _close_zarr_group(group: zarr.Group) -> None:
@@ -246,8 +234,6 @@ def _close_zarr_group(group: zarr.Group) -> None:
 
 def _is_zip_store(store: Any) -> bool:
     """Return True if store is or resolves to a zarr ZipStore."""
-    if ZARR_V2:
-        return False
     return isinstance(store, zarr.storage.ZipStore) or (
         isinstance(store, (str, PathLike)) and str(store).endswith(".zip")
     )

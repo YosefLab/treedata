@@ -397,6 +397,11 @@ class TreeData(ad.AnnData):
 
     def __getitem__(self, index: Any) -> TreeData:
         """Returns a sliced view of the object."""
+        from anndata.acc import AdRef, MapAcc, RefAcc
+
+        if isinstance(index, AdRef | MapAcc | RefAcc):
+            # Accessor indexers retrieve an array/vector, not a TreeData view.
+            return super().__getitem__(index)
         oidx, vidx = self._normalize_indices(index)
         return TreeData(self, oidx=oidx, vidx=vidx, asview=True)
 
