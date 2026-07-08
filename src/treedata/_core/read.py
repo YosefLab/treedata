@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import warnings
 from collections.abc import MutableMapping
-from importlib.metadata import version as get_version
 from os import PathLike
 from typing import Literal
 
@@ -11,12 +10,8 @@ import anndata as ad
 import h5py
 import networkx as nx
 import zarr
-from packaging import version
 
 from treedata._core.treedata import TreeData
-
-ANNDATA_VERSION = version.parse(get_version("anndata"))
-USE_EXPERIMENTAL = ANNDATA_VERSION < version.parse("0.11.0")
 
 # Sentinel distinguishing an absent attribute from an attribute explicitly set to ``None``.
 _MISSING = object()
@@ -24,10 +19,7 @@ _MISSING = object()
 
 def _read_elem(elem):
     """Read an element from a store."""
-    if USE_EXPERIMENTAL:
-        return ad.experimental.read_elem(elem)
-    else:
-        return ad.io.read_elem(elem)
+    return ad.io.read_elem(elem)
 
 
 def _dict_to_digraph(graph_dict: dict) -> nx.DiGraph:
