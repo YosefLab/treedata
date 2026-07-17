@@ -52,8 +52,8 @@ doc = [
   "ipython",
   "myst-nb>=1.1",
   "pandas",
-  "scverse-misc[sphinx]>=0.1.2",
   "pygraphviz",
+  "scverse-misc[sphinx]>=0.1.2",
   # Until pybtex >0.24.0 releases: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
   "setuptools",
   "sphinx>=8.1",
