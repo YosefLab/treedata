@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "treedata"
-version = "0.0.1"
+version = "0.3.1"
 description = "anndata with trees"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -22,11 +22,16 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-  "anndata",
-  # for debug logging (referenced from the issue template)
+  "anndata>=0.13",
+  "h5py",
+  "networkx",
+  "numpy",
+  "packaging",
+  "pandas",
+  "pyarrow",
   "session-info2",
+  "zarr>=3",
 ]
-# https://docs.pypi.org/project_metadata/#project-urls
 urls.Documentation = "https://treedata.readthedocs.io/"
 urls.Homepage = "https://github.com/colganwi/treedata"
 urls.Source = "https://github.com/colganwi/treedata"
@@ -38,6 +43,7 @@ dev = [
 ]
 test = [
   "coverage>=7.10",
+  "joblib",
   "pytest",
   "pytest-cov",     # For VS Code’s coverage functionality
 ]
@@ -47,6 +53,9 @@ doc = [
   "myst-nb>=1.1",
   "pandas",
   "scverse-misc[sphinx]>=0.1.2",
+  "pygraphviz",
+  # Until pybtex >0.24.0 releases: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
+  "setuptools",
   "sphinx>=8.1",
   "sphinx-autodoc-typehints",
   "sphinx-book-theme>=1",
