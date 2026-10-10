@@ -118,6 +118,17 @@ def _write_axis_trees_zarr(f: zarr.Group, key: str, trees: AxisTrees) -> None:
             _write_elem(tg, "edge_attrs", cols, dataset_kwargs={})
 
 
+def _write_tree_elems(f, tdata, kwargs) -> None:
+    """Write the elements TreeData adds to AnnData into group ``f`` (also used by mudata)."""
+    for key in ["label", "allow_overlap", "alignment"]:
+        _write_elem(f, key, getattr(tdata, key), dataset_kwargs=kwargs)
+    for key in ["obst", "vart"]:
+        if isinstance(f, zarr.Group):
+            _write_axis_trees_zarr(f, key, getattr(tdata, key))
+        else:
+            _write_elem(f, key, _serialize_axis_trees(getattr(tdata, key)), dataset_kwargs=kwargs)
+
+
 def _write_tdata(f, tdata, filename, chunks=None, **kwargs) -> None:
     """Write TreeData to file."""
     # Add encoding type and version
@@ -130,19 +141,14 @@ def _write_tdata(f, tdata, filename, chunks=None, **kwargs) -> None:
     if not (tdata.isbacked and Path(tdata.filename) == Path(filename)):
         _write_elem(f, "X", tdata.X, dataset_kwargs=kwargs.update({"chunks": chunks}) if chunks else kwargs)
     # Write array elements
-    for key in ["obs", "var", "label", "allow_overlap", "alignment"]:
+    for key in ["obs", "var"]:
         _write_elem(f, key, getattr(tdata, key), dataset_kwargs=kwargs)
     # Write group elements
     for key in ["obsm", "varm", "obsp", "varp", "uns"]:
         _write_elem(f, key, dict(getattr(tdata, key)), dataset_kwargs=kwargs)
     # Write layers without X (X is written separately above; None key added in anndata 0.13.x)
     _write_elem(f, "layers", {k: v for k, v in tdata.layers.items() if k is not None}, dataset_kwargs=kwargs)
-    # Write axis tree elements
-    for key in ["obst", "vart"]:
-        if isinstance(f, zarr.Group):
-            _write_axis_trees_zarr(f, key, getattr(tdata, key))
-        else:
-            _write_elem(f, key, _serialize_axis_trees(getattr(tdata, key)), dataset_kwargs=kwargs)
+    _write_tree_elems(f, tdata, kwargs)
     # Write raw
     if tdata.raw is not None:
         tdata.strings_to_categoricals(tdata.raw.var)

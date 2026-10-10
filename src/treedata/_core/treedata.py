@@ -488,6 +488,19 @@ class TreeData(ad.AnnData):
 
     T = property(transpose)
 
+    def _write_mudata_extras(self, group, *, dataset_kwargs) -> None:
+        """Store obst, vart, label, allow_overlap and alignment in a MuData modality group (called by mudata)."""
+        from .write import _write_tree_elems
+
+        _write_tree_elems(group, self, dataset_kwargs)
+
+    @classmethod
+    def _read_mudata_extras(cls, group, adata: ad.AnnData) -> TreeData:
+        """Rebuild a TreeData from a MuData modality read as ``adata`` (called by mudata)."""
+        from .read import _read_tree_elems
+
+        return cls(adata, **_read_tree_elems(group))
+
     def write_h5td(
         self,
         filename: PathLike | None = None,

@@ -321,3 +321,54 @@ def test_h5td_backing(tdata, tree, tmp_path):
 
 if __name__ == "__main__":
     pytest.main(["-v", __file__])
+
+
+@pytest.fixture
+def tdata_nondefault(X, tree):
+    yield td.TreeData(X, obst={"1": tree}, vart={"1": tree}, label="clade", allow_overlap=False, alignment="subset")
+
+
+def check_tdata_equality(tdata, tdata2):
+    assert type(tdata2) is td.TreeData
+    assert np.array_equal(tdata2.X, tdata.X)
+    check_graph_equality(tdata2.obst["1"], tdata.obst["1"])
+    check_graph_equality(tdata2.vart["1"], tdata.vart["1"])
+    assert tdata2.obst["1"].nodes["root"]["characters"] == ["-1", "1"]
+    assert tdata2.label == tdata.label
+    assert tdata2.allow_overlap is tdata.allow_overlap
+    assert tdata2.alignment == tdata.alignment
+
+
+@pytest.mark.parametrize("fmt", ["h5", "zarr"])
+def test_mudata_hooks(tdata_nondefault, tmp_path, fmt):
+    """The hooks mudata calls store and restore the TreeData elements next to the AnnData ones."""
+    import h5py
+    import zarr
+
+    tdata = tdata_nondefault
+    f = h5py.File(tmp_path / "test.h5", "w") if fmt == "h5" else zarr.open_group(tmp_path / "test.zarr", mode="w")
+    ad.io.write_elem(f, "mod", ad.AnnData(tdata))
+    tdata._write_mudata_extras(f["mod"], dataset_kwargs={})
+    tdata2 = td.TreeData._read_mudata_extras(f["mod"], ad.io.read_elem(f["mod"]))
+    check_tdata_equality(tdata, tdata2)
+    if fmt == "h5":
+        f.close()
+
+
+@pytest.mark.parametrize("fmt", ["h5mu", "zarr"])
+def test_mudata_readwrite(tdata_nondefault, tmp_path, fmt):
+    md = pytest.importorskip("mudata")
+    tdata = tdata_nondefault
+    other = ad.AnnData(np.ones((3, 2)), obs=tdata.obs[[]], var=pd.DataFrame(index=["a", "b"]))
+    mdata = md.MuData({"tree": tdata, "other": other})
+    path = tmp_path / f"test.{fmt}"
+    if fmt == "h5mu":
+        md.write_h5mu(path, mdata)
+        mdata2 = md.read_h5mu(path)
+    else:
+        md.write_zarr(path, mdata)
+        mdata2 = md.read_zarr(path)
+    if not isinstance(mdata2["tree"], td.TreeData):
+        pytest.skip("the installed mudata does not support AnnData subclass modalities")
+    check_tdata_equality(tdata, mdata2["tree"])
+    assert type(mdata2["other"]) is ad.AnnData

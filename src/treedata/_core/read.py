@@ -101,6 +101,22 @@ def _read_raw(f, backed):
     return d
 
 
+def _read_tree_elems(f) -> dict:
+    """Read the elements TreeData adds to AnnData from group ``f`` (also used by mudata)."""
+    d = {}
+    for k in ["label", "allow_overlap", "alignment"]:
+        if k in f:
+            d[k] = _read_elem(f[k])
+    for k in ["obst", "vart"]:
+        if k in f:
+            elem = f[k]
+            if isinstance(elem, zarr.Group):
+                d[k] = _read_axis_trees_zarr(elem)
+            else:
+                d[k] = _parse_axis_trees(_read_elem(elem))
+    return d
+
+
 def _read_tdata(f, filename, backed) -> dict:
     """Read TreeData from file."""
     d = {}
@@ -115,20 +131,13 @@ def _read_tdata(f, filename, backed) -> dict:
     else:
         d.update({"filename": filename, "filemode": backed})
     # Read standard elements
-    for k in ["obs", "var", "obsm", "varm", "obsp", "varp", "layers", "uns", "label", "allow_overlap", "alignment"]:
+    for k in ["obs", "var", "obsm", "varm", "obsp", "varp", "layers", "uns"]:
         if k in f:
             d[k] = _read_elem(f[k])
     # Read raw
     if "raw" in f:
         d["raw"] = _read_raw(f, backed)
-    # Read axis tree elements
-    for k in ["obst", "vart"]:
-        if k in f:
-            elem = f[k]
-            if isinstance(elem, zarr.Group):
-                d[k] = _read_axis_trees_zarr(elem)
-            else:
-                d[k] = _parse_axis_trees(_read_elem(elem))
+    d.update(_read_tree_elems(f))
     # Read legacy treedata format
     if "raw.treedata" in f:
         d.update(_parse_legacy(json.loads(_read_elem(f["raw.treedata"]))))
