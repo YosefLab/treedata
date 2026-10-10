@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning][].
 
 ### Fixed
 
-- A `TreeData` modality of a `MuData` now keeps `obst`, `vart`, `label`, `allow_overlap` and `alignment` when written with `mudata.write_h5mu`/`write_zarr`/`write_h5ad` and read back, through the `_write_mudata_extras`/`_read_mudata_extras` hooks (requires a mudata version that calls them)
+- A `TreeData` modality of a `MuData` now keeps `obst`, `vart`, `label`, `allow_overlap` and `alignment` when written with `mudata.write_h5mu`/`write_zarr`/`write_h5ad` and read back, through the `_write_mudata_extras`/`_read_mudata_extras` hooks (requires a mudata version that calls them) (#103)
 
 ## [0.3.1] - 2026-07-08
 
