@@ -319,10 +319,6 @@ def test_h5td_backing(tdata, tree, tmp_path):
     check_graph_equality(tdata_subset.obst["1"], tdata.obst["1"])
 
 
-if __name__ == "__main__":
-    pytest.main(["-v", __file__])
-
-
 @pytest.fixture
 def tdata_nondefault(X, tree):
     yield td.TreeData(X, obst={"1": tree}, vart={"1": tree}, label="clade", allow_overlap=False, alignment="subset")
@@ -340,16 +336,16 @@ def check_tdata_equality(tdata, tdata2):
 
 
 @pytest.mark.parametrize("fmt", ["h5", "zarr"])
-def test_mudata_hooks(tdata_nondefault, tmp_path, fmt):
-    """The hooks mudata calls store and restore the TreeData elements next to the AnnData ones."""
+def test_tree_elems(tdata_nondefault, tmp_path, fmt):
+    """write_tree_elems / read_tree_elems store and restore the TreeData elements next to the AnnData ones."""
     import h5py
     import zarr
 
     tdata = tdata_nondefault
     f = h5py.File(tmp_path / "test.h5", "w") if fmt == "h5" else zarr.open_group(tmp_path / "test.zarr", mode="w")
     ad.io.write_elem(f, "mod", ad.AnnData(tdata))
-    tdata._write_mudata_extras(f["mod"], dataset_kwargs={})
-    tdata2 = td.TreeData._read_mudata_extras(f["mod"], ad.io.read_elem(f["mod"]))
+    td.write_tree_elems(f["mod"], tdata)
+    tdata2 = td.read_tree_elems(f["mod"], ad.io.read_elem(f["mod"]))
     check_tdata_equality(tdata, tdata2)
     if fmt == "h5":
         f.close()
@@ -372,3 +368,7 @@ def test_mudata_readwrite(tdata_nondefault, tmp_path, fmt):
         pytest.skip("the installed mudata does not support AnnData subclass modalities")
     check_tdata_equality(tdata, mdata2["tree"])
     assert type(mdata2["other"]) is ad.AnnData
+
+
+if __name__ == "__main__":
+    pytest.main(["-v", __file__])

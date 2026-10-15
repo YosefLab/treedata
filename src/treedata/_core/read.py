@@ -102,7 +102,7 @@ def _read_raw(f, backed):
 
 
 def _read_tree_elems(f) -> dict:
-    """Read the elements TreeData adds to AnnData from group ``f`` (also used by mudata)."""
+    """Read the elements TreeData adds to AnnData from group ``f``."""
     d = {}
     for k in ["label", "allow_overlap", "alignment"]:
         if k in f:
@@ -115,6 +115,23 @@ def _read_tree_elems(f) -> dict:
             else:
                 d[k] = _parse_axis_trees(_read_elem(elem))
     return d
+
+
+def read_tree_elems(group: h5py.Group | zarr.Group, adata: ad.AnnData) -> TreeData:
+    """Build a TreeData from an AnnData and the tree elements stored in ``group``.
+
+    The counterpart of :func:`treedata.write_tree_elems`. ``adata`` is the AnnData read
+    from ``group`` (e.g. by mudata) and ``group`` holds the ``obst``, ``vart``, ``label``,
+    ``allow_overlap`` and ``alignment`` elements next to it.
+
+    Parameters
+    ----------
+    group
+        HDF5 or Zarr group containing the tree elements.
+    adata
+        The AnnData read from ``group``.
+    """
+    return TreeData(adata, **_read_tree_elems(group))
 
 
 def _read_tdata(f, filename, backed) -> dict:
