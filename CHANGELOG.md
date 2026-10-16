@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning][].
 
 ### Added
 
+- `write_tree_elems` and `read_tree_elems` to store the tree elements (`obst`, `vart`, `label`, `allow_overlap`, `alignment`) of a `TreeData` in an existing AnnData group. `mudata` uses them so that a `TreeData` modality of a `MuData` keeps its trees through `write_h5mu`/`write_zarr`/`write_h5ad` and read (requires a mudata version that calls them) (#103)
+
 ### Changed
 
 ### Fixed
