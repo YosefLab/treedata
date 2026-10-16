@@ -1,3 +1,5 @@
+import warnings
+
 import networkx as nx
 import numpy as np
 import pytest
@@ -63,6 +65,21 @@ def test_read_nwk_root_length(nwk):
     assert [tree.nodes[n]["time"] for n in tree if tree.in_degree(n) == 0] == [0.5]
     assert tree.nodes["A"]["time"] == 1.5
     assert tree.nodes["B"]["time"] == 2.5
+
+
+def test_read_nwk_only_root_length(nwk):
+    # A root length is a branch length, so a single node can have a `time`
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        tree = td.io.read_nwk(nwk("A:1;")).obst["tree"]
+    assert dict(tree.nodes(data=True)) == {"A": {"time": 1}}
+    # The branches below a root with a length but without lengths of their own are missing
+    with pytest.warns(UserWarning, match="no length"):
+        tree = td.io.read_nwk(nwk("(A,B):0.5;")).obst["tree"]
+    root = next(n for n in tree if tree.in_degree(n) == 0)
+    assert tree.nodes[root]["time"] == 0.5
+    assert all(np.isnan(attrs["length"]) for _, _, attrs in tree.edges(data=True))
+    assert all(np.isnan(tree.nodes[n]["time"]) for n in ["A", "B"])
 
 
 def test_read_nwk_internal_labels(nwk):

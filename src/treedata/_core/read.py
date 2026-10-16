@@ -393,8 +393,8 @@ def _build_nwk_trees(roots: list[_NwkNode], key: str) -> dict[str, nx.DiGraph]:
         duplicates = sorted(name for name, n in Counter(names).items() if n > 1)
         if duplicates:
             raise ValueError(f"Node names must be unique within a tree, but found duplicates: {duplicates[:10]}")
-        # Branch lengths are only kept if the tree has any
-        has_lengths = any(node.length is not None for node, parent in order if parent is not None)
+        # Branch lengths are only kept if the tree has any, including one on the root
+        has_lengths = any(node.length is not None for node, _ in order)
         missing = False
         G = nx.DiGraph()
         for node, parent in order:
@@ -460,8 +460,8 @@ def read_nwk(
     - If the tree has branch lengths, they are stored as the `length` attribute of the edges
       and the distance from the root as the `time` attribute of the nodes. The `time` of the
       root is its own branch length if it has one and 0 otherwise. If only some branches have
-      a length, the others get a `length` of NaN and a warning is raised. Without any branch
-      lengths neither attribute is set.
+      a length (this includes a tree where only the root has one), the others get a `length`
+      of NaN and a warning is raised. Without any branch lengths neither attribute is set.
     - Labels become node names. Internal labels that are numbers (e.g. bootstrap support) are
       stored as the `support` attribute of the node instead, unless they are quoted.
     - Nodes without a name get a unique generated name (`node0`, `node1`, ...).
