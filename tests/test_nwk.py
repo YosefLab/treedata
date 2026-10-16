@@ -70,7 +70,8 @@ def test_read_nwk_root_length(nwk):
 def test_read_nwk_only_root_length(nwk):
     # A root length is a branch length, so a single node can have a `time`
     with warnings.catch_warnings():
-        warnings.simplefilter("error")
+        # Only this warning, as dependencies can emit unrelated ones, e.g. pandas deprecations
+        warnings.filterwarnings("error", message="Some branches have no length")
         tree = td.io.read_nwk(nwk("A:1;")).obst["tree"]
     assert dict(tree.nodes(data=True)) == {"A": {"time": 1}}
     # The branches below a root with a length but without lengths of their own are missing
