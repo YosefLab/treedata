@@ -34,6 +34,8 @@ Reading TreeData objects:
 
    read_h5td
    read_zarr
+   io.read_nwk
+   io.read_tree_elems
 ```
 
 ## Write
@@ -46,4 +48,5 @@ Writing TreeData objects:
 
    TreeData.write_h5td
    TreeData.write_zarr
+   io.write_tree_elems
 ```

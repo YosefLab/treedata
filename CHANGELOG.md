@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning][].
 
 ### Added
 
+- `treedata.io.read_nwk` to read Newick (`.nwk`) tree files into a `TreeData` with the leaves as observations and no variables. Branch lengths are stored as the `length` of the edges and the distance from the root as the `time` of the nodes. Quoted labels, comments, internal node labels (numbers are stored as `support`), unnamed nodes and files with several trees are supported. `alignment="nodes"` makes all nodes, instead of only the leaves, observations (#105)
+- `treedata.io` module, which also exposes `read_h5td`, `read_zarr`, `read_tree_elems` and `write_tree_elems`. `read_h5td` and `read_zarr` remain available as `treedata.read_h5td` and `treedata.read_zarr`, as with `anndata` (#105)
 - `write_tree_elems` and `read_tree_elems` to store the tree elements (`obst`, `vart`, `label`, `allow_overlap`, `alignment`) of a `TreeData` in an existing AnnData group. `mudata` uses them so that a `TreeData` modality of a `MuData` keeps its trees through `write_h5mu`/`write_zarr`/`write_h5ad` and read (requires a mudata version that calls them) (#103)
 
 ### Changed
