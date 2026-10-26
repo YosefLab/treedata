@@ -546,6 +546,22 @@ class TreeData(ad.AnnData):
 
         write_zarr(store, self, chunks=chunks)
 
+    def write_nwk(self, filename: PathLike, *, key: str | None = None):
+        """Write the trees in :attr:`obst` to a Newick (`.nwk`) file.
+
+        See :func:`treedata.io.write_nwk`.
+
+        Parameters
+        ----------
+        filename
+            Path of the file to write.
+        key
+            Key of the tree in :attr:`obst` to write. By default all trees are written, one per line.
+        """
+        from .write import write_nwk
+
+        write_nwk(filename, self, key=key)
+
     def to_memory(self, copy=False) -> TreeData:
         """Return a new AnnData object with all backed arrays loaded into memory.
 
