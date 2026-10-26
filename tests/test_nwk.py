@@ -2,6 +2,7 @@ import warnings
 
 import networkx as nx
 import numpy as np
+import pandas as pd
 import pytest
 
 import treedata as td
@@ -243,3 +244,79 @@ def test_read_nwk_invalid(nwk, text, match):
 def test_read_nwk_duplicate_names(nwk):
     with pytest.raises(ValueError, match="unique"):
         td.io.read_nwk(nwk("((A,B)C,(A,D)C);"))
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "((A:1,B:2)95:3,(C:1,D:1)x:2);",
+        "((A,B)95,(C,D)x);",
+        "(A:1,B:2):0.5;",
+        "('a b':1,'it''s (x);':2,(C:1,D:1)'12':1);",
+        "A:1;",
+        "A;",
+        "((A:1e-05,B:-2)x:3,C:2);",
+        "((A,B),C);\n((A,C),B)x;",
+    ],
+)
+@pytest.mark.parametrize("alignment", ["leaves", "nodes"])
+def test_write_nwk_roundtrip(nwk, tmp_path, text, alignment):
+    tdata = td.io.read_nwk(nwk(text), alignment=alignment)
+    path = tmp_path / "out.nwk"
+    td.io.write_nwk(path, tdata)
+    tdata2 = td.io.read_nwk(path, alignment=alignment)
+    assert list(tdata2.obs_names) == list(tdata.obs_names)
+    assert list(tdata2.obst) == list(tdata.obst)
+    for k in tdata.obst:
+        assert nx.utils.graphs_equal(tdata.obst[k], tdata2.obst[k])
+
+
+def test_write_nwk_text(tmp_path):
+    tree = nx.DiGraph()
+    tree.add_edge("root", "x", length=1.5)
+    tree.add_edge("root", "y z", length=2)
+    tree.add_edge("x", "A", length=1)
+    tree.add_edge("x", "B", length=float("nan"))
+    tree.nodes["x"]["support"] = 90
+    tree.nodes["root"]["time"] = 0.25
+    tdata = td.TreeData(obs=pd.DataFrame(index=["A", "B", "y z"]), obst={"tree": tree})
+    tdata.write_nwk(tmp_path / "out.nwk")
+    assert (tmp_path / "out.nwk").read_text() == "((A:1.0,B)90.0:1.5,'y z':2.0)root:0.25;\n"
+
+
+def test_write_nwk_key(nwk, tmp_path):
+    tdata = td.io.read_nwk(nwk("((A,B),C);\n(D,E);"))
+    tdata.write_nwk(tmp_path / "all.nwk")
+    assert len((tmp_path / "all.nwk").read_text().splitlines()) == 2
+    tdata.write_nwk(tmp_path / "one.nwk", key="tree_1")
+    tdata2 = td.io.read_nwk(tmp_path / "one.nwk")
+    assert list(tdata2.obs_names) == ["D", "E"]
+    with pytest.raises(KeyError, match="missing"):
+        tdata.write_nwk(tmp_path / "x.nwk", key="missing")
+
+
+def test_write_nwk_no_trees(tmp_path):
+    with pytest.raises(ValueError, match="no non-empty trees"):
+        td.TreeData(np.zeros((2, 1))).write_nwk(tmp_path / "x.nwk")
+
+
+def test_write_nwk_deep_tree(nwk, tmp_path):
+    n = 5000
+    text = "(" * n + "A:1" + "".join(f",B{i}:1):1" for i in range(n)).removesuffix(":1") + ";"
+    tdata = td.io.read_nwk(nwk(text))
+    tdata.write_nwk(tmp_path / "out.nwk")
+    assert nx.utils.graphs_equal(tdata.obst["tree"], td.io.read_nwk(tmp_path / "out.nwk").obst["tree"])
+
+
+def test_write_nwk_view_with_empty_tree(nwk, tmp_path):
+    tdata = td.io.read_nwk(nwk("((A,B),C);\n(D,E);"))
+    view = tdata[["D", "E"]]
+    assert view.is_view
+    assert view.obst["tree_0"].number_of_nodes() == 0
+    view.write_nwk(tmp_path / "view.nwk")
+    tdata2 = td.io.read_nwk(tmp_path / "view.nwk")
+    assert list(tdata2.obs_names) == ["D", "E"]
+    # Nothing to write for a tree of which all observations were removed, and no file is left behind
+    with pytest.raises(ValueError, match="no non-empty trees"):
+        view.write_nwk(tmp_path / "empty.nwk", key="tree_0")
+    assert not (tmp_path / "empty.nwk").exists()
