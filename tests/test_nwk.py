@@ -296,7 +296,7 @@ def test_write_nwk_key(nwk, tmp_path):
 
 
 def test_write_nwk_no_trees(tmp_path):
-    with pytest.raises(ValueError, match="no trees"):
+    with pytest.raises(ValueError, match="no non-empty trees"):
         td.TreeData(np.zeros((2, 1))).write_nwk(tmp_path / "x.nwk")
 
 
@@ -306,3 +306,17 @@ def test_write_nwk_deep_tree(nwk, tmp_path):
     tdata = td.io.read_nwk(nwk(text))
     tdata.write_nwk(tmp_path / "out.nwk")
     assert nx.utils.graphs_equal(tdata.obst["tree"], td.io.read_nwk(tmp_path / "out.nwk").obst["tree"])
+
+
+def test_write_nwk_view_with_empty_tree(nwk, tmp_path):
+    tdata = td.io.read_nwk(nwk("((A,B),C);\n(D,E);"))
+    view = tdata[["D", "E"]]
+    assert view.is_view
+    assert view.obst["tree_0"].number_of_nodes() == 0
+    view.write_nwk(tmp_path / "view.nwk")
+    tdata2 = td.io.read_nwk(tmp_path / "view.nwk")
+    assert list(tdata2.obs_names) == ["D", "E"]
+    # Nothing to write for a tree of which all observations were removed, and no file is left behind
+    with pytest.raises(ValueError, match="no non-empty trees"):
+        view.write_nwk(tmp_path / "empty.nwk", key="tree_0")
+    assert not (tmp_path / "empty.nwk").exists()

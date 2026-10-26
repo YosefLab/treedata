@@ -393,7 +393,7 @@ def write_nwk(filename: PathLike | str, tdata: TreeData, *, key: str | None = No
         TreeData object to write.
     key
         Key of the tree in :attr:`~treedata.TreeData.obst` to write. By default all trees are
-        written, one per line.
+        written, one per line. Empty trees are skipped.
 
     Notes
     -----
@@ -410,8 +410,10 @@ def write_nwk(filename: PathLike | str, tdata: TreeData, *, key: str | None = No
         keys = [key]
     else:
         raise KeyError(f"No tree with key {key!r} in `obst`.")
-    if not keys:
-        raise ValueError("The TreeData has no trees in `obst` to write.")
+    # Trees without nodes, e.g. those of which all observations were removed from a view, are skipped.
+    # Converting all trees before opening the file avoids leaving a partially written file behind.
+    lines = [_tree_to_newick(tree) for tree in map(tdata.obst.__getitem__, keys) if tree.number_of_nodes() > 0]
+    if not lines:
+        raise ValueError("There are no non-empty trees in `obst` to write.")
     with open(filename, "w", encoding="utf-8") as f:
-        for k in keys:
-            f.write(_tree_to_newick(tdata.obst[k]) + "\n")
+        f.write("\n".join(lines) + "\n")
