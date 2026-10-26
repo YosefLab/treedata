@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import warnings
 from collections.abc import MutableMapping
 from os import PathLike
@@ -15,6 +16,7 @@ import pandas as pd
 import zarr
 
 from treedata._core.aligned_mapping import AxisTrees
+from treedata._core.read import _NWK_NUMBER
 from treedata._core.treedata import TreeData
 
 # Sentinel distinguishing an absent attribute from an attribute explicitly set to ``None``.
@@ -318,3 +320,98 @@ def write_zarr(
         _write_tdata(f, tdata, filename, chunks, **kwargs)
         if should_close:
             _close_zarr_group(f)
+
+
+_NWK_SPECIAL = re.compile(r"[\s()\[\]:;,']")
+
+
+def _nwk_label(name: Any, *, internal: bool) -> str:
+    """Format a node name as a Newick label, quoting it if needed."""
+    label = str(name)
+    # Numbers on internal nodes would be read back as support values
+    if not label or _NWK_SPECIAL.search(label) or (internal and _NWK_NUMBER.fullmatch(label)):
+        return "'" + label.replace("'", "''") + "'"
+    return label
+
+
+def _nwk_length(length: Any) -> str:
+    """Format a branch length, leaving it out if it is missing."""
+    if length is None or np.isnan(length):
+        return ""
+    return ":" + repr(float(length))
+
+
+def _tree_to_newick(tree: nx.DiGraph) -> str:
+    """Convert a tree to a Newick string, without recursion so that deep trees work."""
+    root = next(node for node, degree in tree.in_degree() if degree == 0)
+    has_lengths = "time" in tree.nodes[root] or any("length" in attrs for _, _, attrs in tree.edges(data=True))
+    parts: list[str] = []
+    # Items are text to write, a node to open, or a node to close
+    stack: list[str | tuple[str, Any]] = [("open", root)]
+    while stack:
+        item = stack.pop()
+        if isinstance(item, str):
+            parts.append(item)
+            continue
+        action, node = item
+        attrs = tree.nodes[node]
+        parents = list(tree.predecessors(node))
+        length = ""
+        if has_lengths:
+            if parents:
+                length = _nwk_length(tree.edges[parents[0], node].get("length"))
+            elif attrs.get("time"):
+                # The root has no branch, its length is its time
+                length = _nwk_length(attrs["time"])
+        children = list(tree.successors(node))
+        if action == "open" and children:
+            parts.append("(")
+            stack.append(("close", node))
+            for i, child in enumerate(reversed(children)):
+                stack.append(("open", child))
+                if i < len(children) - 1:
+                    stack.append(",")
+        elif children:
+            label = _nwk_label(node, internal=True) if "support" not in attrs else repr(float(attrs["support"]))
+            parts.append(")" + label + length)
+        else:
+            parts.append(_nwk_label(node, internal=False) + length)
+    return "".join(parts) + ";"
+
+
+def write_nwk(filename: PathLike | str, tdata: TreeData, *, key: str | None = None) -> None:
+    """Write the trees of a TreeData to a Newick (`.nwk`) file.
+
+    The counterpart of :func:`treedata.io.read_nwk`. Only the trees in
+    :attr:`~treedata.TreeData.obst` are written, not the observations or variables.
+
+    Parameters
+    ----------
+    filename
+        Path of the file to write.
+    tdata
+        TreeData object to write.
+    key
+        Key of the tree in :attr:`~treedata.TreeData.obst` to write. By default all trees are
+        written, one per line.
+
+    Notes
+    -----
+    - If the edges have a `length` attribute, branch lengths are written. The branch length of the
+      root is its `time`, if that is not 0. Missing (NaN) lengths are left out.
+    - Internal nodes are labelled with their `support` attribute if they have one and with their
+      name otherwise. Leaves are labelled with their name. Names that contain special characters
+      are quoted, and so are numeric names of internal nodes so that they are not read as support.
+    - Node attributes other than `support` and `time` are not written.
+    """
+    if key is None:
+        keys = list(tdata.obst.keys())
+    elif key in tdata.obst:
+        keys = [key]
+    else:
+        raise KeyError(f"No tree with key {key!r} in `obst`.")
+    if not keys:
+        raise ValueError("The TreeData has no trees in `obst` to write.")
+    with open(filename, "w", encoding="utf-8") as f:
+        for k in keys:
+            f.write(_tree_to_newick(tdata.obst[k]) + "\n")

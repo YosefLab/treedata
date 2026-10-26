@@ -48,5 +48,7 @@ Writing TreeData objects:
 
    TreeData.write_h5td
    TreeData.write_zarr
+   TreeData.write_nwk
+   io.write_nwk
    io.write_tree_elems
 ```
