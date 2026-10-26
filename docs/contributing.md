@@ -11,7 +11,7 @@ the [scientific Python tutorials][], or the [scanpy developer guide][].
 [scientific Python tutorials]: https://learn.scientific-python.org/development/tutorials/
 [scanpy developer guide]: https://scanpy.scverse.org/page/dev/
 
-:::{tip} The *hatch* project manager
+:::{tip} The _hatch_ project manager
 
 We highly recommend to familiarize yourself with [`hatch`][hatch].
 Hatch is a Python project manager that
@@ -195,7 +195,7 @@ Alternatively, you can run all tests from the command line by executing
 :::::{tab-set}
 ::::{tab-item} Hatch
 
-```bash
+````bash
 hatch test  # test with the highest supported Python version
 # or
 hatch test --all  # test with all supported Python versions
@@ -206,7 +206,7 @@ hatch test --all  # test with all supported Python versions
 
 ```bash
 uv run pytest
-```
+````
 
 ::::
 
