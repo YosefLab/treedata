@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning][].
 
 ### Changed
 
-- Require `zarr>=3` (anndata 0.13 no longer supports zarr <3). Removed the dead `zarr<3` (`ZARR_V2`) code branches and the dead `anndata<0.11` (`USE_EXPERIMENTAL`) code branches now that the supported floors exceed them  (#88)
+- Require `zarr>=3` (anndata 0.13 no longer supports zarr <3). Removed the dead `zarr<3` (`ZARR_V2`) code branches and the dead `anndata<0.11` (`USE_EXPERIMENTAL`) code branches now that the supported floors exceed them (#88)
 - Zarr writes now store `obst`/`vart` in a columnar layout (one array per node/edge attribute key) instead of a single JSON scalar. Dense numeric/boolean columns use native dtypes; ragged or complex columns fall back to per-element JSON. This fixes a `TypeError: string too large to store inside array` crash when writing large trees to zarr v3 (#86)
 - `dtype` parameter in `TreeData.__init__` is now deprecated; passing it raises a `FutureWarning` and has no effect, matching anndata's removal of this argument
 - `obsm`, `varm`, `layers`, `raw`, `shape`, `filename`, `filemode`, `asview`, and related parameters in `TreeData.__init__` are now keyword-only, matching the anndata 0.13.x API
