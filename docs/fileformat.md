@@ -13,13 +13,13 @@ page documents only what TreeData adds.
 The root group carries `encoding-type: "treedata"` and, in addition to the
 standard AnnData elements (`X`, `obs`, `var`, `obsm`, `uns`, …), stores:
 
-| Element | Type | Description |
-| --- | --- | --- |
-| `label` | scalar (string) or absent | Column in `obs`/`var` that holds each node's tree key |
-| `allow_overlap` | scalar (bool) | Whether trees may share nodes |
-| `alignment` | scalar (string) | One of `leaves`, `nodes`, `subset` |
-| `obst` | see below | Trees aligned to observations |
-| `vart` | see below | Trees aligned to variables |
+| Element         | Type                      | Description                                           |
+| --------------- | ------------------------- | ----------------------------------------------------- |
+| `label`         | scalar (string) or absent | Column in `obs`/`var` that holds each node's tree key |
+| `allow_overlap` | scalar (bool)             | Whether trees may share nodes                         |
+| `alignment`     | scalar (string)           | One of `leaves`, `nodes`, `subset`                    |
+| `obst`          | see below                 | Trees aligned to observations                         |
+| `vart`          | see below                 | Trees aligned to variables                            |
 
 `obst` and `vart` are mappings of a key to a :class:`networkx.DiGraph`. They are
 the only elements stored differently from AnnData, and the layout depends on the
@@ -31,8 +31,12 @@ Each of `obst`/`vart` is stored as a **single JSON string** dataset mapping tree
 key → `{"nodes": {...}, "edges": {...}}`, with node and edge attributes inline:
 
 ```json
-{"tree1": {"nodes": {"root": {"depth": 0}, "0": {}},
-           "edges": {"root": {"0": {"length": 1.5}}}}}
+{
+    "tree1": {
+        "nodes": { "root": { "depth": 0 }, "0": {} },
+        "edges": { "root": { "0": { "length": 1.5 } } }
+    }
+}
 ```
 
 ## Trees in zarr
